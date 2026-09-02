@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import StatusBadge from '../components/StatusBadge';
 import TierBadge from '../components/TierBadge';
 import ProofOfDisclosure from '../components/ProofOfDisclosure';
+import StartupTrustProfile from '../components/StartupTrustProfile';
 
 // Novelty verdict badge
 function NoveltyBadge({ verdict }) {
