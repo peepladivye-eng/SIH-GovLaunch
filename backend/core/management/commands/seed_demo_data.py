@@ -107,6 +107,7 @@ class Command(BaseCommand):
         User.objects.create_superuser(username='admin', password='demo1234', role='admin')
 
         self.stdout.write("Creating Applications...")
+        from core.badges import award_badge
         solution_briefs = {
             'MediTriage AI': 'We propose deploying our NLP-based triage engine at 5 pilot PHCs, integrating with the existing teleconsultation queue system. Our model classifies patient symptoms into urgency tiers within 30 seconds, routing critical cases directly to available specialists. We project a 40-45% reduction in average wait times based on our urban clinic pilot data.',
             'DiagnoAI': 'Our AI diagnostic platform can be deployed as a pre-consultation screening layer, analysing patient-reported symptoms and vitals captured by ASHA workers. The system generates a preliminary risk score that helps doctors prioritise their teleconsultation queue. We have validated our models on 50,000+ Indian patient records.',
