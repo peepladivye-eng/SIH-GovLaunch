@@ -8,10 +8,18 @@ def run_eligibility_check(application):
     results = []
 
     if rules.get("requires_dpiit"):
-        passed = bool(startup.dpiit_id)
-        results.append(("requires_dpiit", passed,
-            "Startup holds valid DPIIT recognition (ID present)." if passed else
-            "Startup does not have a DPIIT recognition ID on file."))
+        reg = startup.registration_status
+        if reg == "dpiit_recognized":
+            reason = "Startup holds valid DPIIT recognition (ID present)."
+        elif reg == "incorporated":
+            reason = ("Startup is incorporated; DPIIT recognition pending. "
+                      "Eligible to apply and be evaluated; DPIIT recognition "
+                      "required before final contracting.")
+        else:
+            reason = ("Startup has not yet incorporated. Eligible to apply "
+                      "and be evaluated; incorporation and DPIIT recognition "
+                      "required before final contracting.")
+        results.append(("requires_dpiit", True, reason))
 
     if rules.get("min_team_size", 0) > 0:
         passed = startup.team_size >= rules["min_team_size"]
