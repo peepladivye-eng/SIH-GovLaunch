@@ -177,6 +177,56 @@ export default function ChallengeDetail() {
           <TabsTrigger value="applications">Applications</TabsTrigger>
         </TabsList>
         <TabsContent value="applications" className="pt-4">
+          {/* Finalize Round controls */}
+          <div className="flex items-center gap-3 mb-4 p-4 bg-[--surface-alt] rounded-xl border border-[--border]">
+            <select
+              value={finalizeRound}
+              onChange={e => setFinalizeRound(e.target.value)}
+              className="h-10 rounded-lg border border-[--border] bg-white px-3 text-sm"
+            >
+              <option value="round1_application">Round 1: Application</option>
+              <option value="round2_prototype">Round 2: Prototype</option>
+            </select>
+            <Button
+              onClick={handleFinalizeRound}
+              disabled={finalizing}
+              className="bg-[--gov-accent] hover:bg-[--gov-accent-light] text-white"
+            >
+              {finalizing ? 'Finalizing…' : 'Finalize Round & Update Ratings'}
+            </Button>
+          </div>
+
+          {/* Finalize result dialog */}
+          {finalizeResult && (
+            <div className="mb-4 p-4 bg-[--success-bg] border border-[--success] rounded-xl">
+              <div className="flex items-center justify-between mb-3">
+                <span className="font-semibold text-[--text-primary]">
+                  Round Finalized — Cohort Average: {finalizeResult.cohort_average}/50
+                </span>
+                <button onClick={() => setFinalizeResult(null)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[--text-secondary]">
+                    <th className="pb-2">Startup</th>
+                    <th className="pb-2">Score</th>
+                    <th className="pb-2">Rating Change</th>
+                    <th className="pb-2">New Rating</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {finalizeResult.results.map(r => (
+                    <tr key={r.application_id} className="border-t border-[--border]">
+                      <td className="py-1.5 font-medium text-[--text-primary]">{r.startup_name}</td>
+                      <td className="py-1.5">{r.score}/50</td>
+                      <td className="py-1.5 text-green-600 font-semibold">+{r.delta}</td>
+                      <td className="py-1.5">{r.new_rating}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           {/* Rejected count link */}
           {rejectedCount > 0 && (
             <div className="mb-4">
