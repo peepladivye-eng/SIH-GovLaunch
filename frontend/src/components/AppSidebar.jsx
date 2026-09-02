@@ -185,16 +185,23 @@ export default function AppSidebar() {
           Navigation
         </div>
 
-        {cfg.nav.map((item) => (
-          <NavLink
+        {cfg.nav.map((item, i) => (
+          <motion.div
             key={item.path}
-            to={item.path}
-            style={{ textDecoration: 'none', display: 'block', marginBottom: 3 }}
+            initial={{ opacity: 0, x: -24 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.35, delay: 0.1 + i * 0.07, ease: 'easeOut' }}
           >
-            {({ isActive }) => (
-              <NavItem item={item} isActive={isActive} cfg={cfg} />
-            )}
-          </NavLink>
+            <NavLink
+              key={item.path}
+              to={item.path}
+              style={{ textDecoration: 'none', display: 'block', marginBottom: 3 }}
+            >
+              {({ isActive }) => (
+                <NavItem item={item} isActive={isActive} cfg={cfg} />
+              )}
+            </NavLink>
+          </motion.div>
         ))}
       </nav>
 
