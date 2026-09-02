@@ -55,6 +55,7 @@ class Application(models.Model):
     solution_brief = models.TextField()
     proposed_timeline = models.IntegerField(null=True, blank=True)
     budget_quote = models.BigIntegerField(null=True, blank=True)
+    content_hash = models.CharField(max_length=64, blank=True, default='')
     status = models.CharField(max_length=30, choices=[
         ('submitted', 'Submitted'), ('screening', 'Screening'),
         ('eligible', 'Eligible'), ('ineligible', 'Ineligible'),
