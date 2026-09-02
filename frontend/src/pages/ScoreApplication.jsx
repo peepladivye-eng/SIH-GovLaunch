@@ -2,116 +2,120 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { Button } from '../components/ui/button';
 import { Textarea } from '../components/ui/textarea';
-import { Switch } from '../components/ui/switch';
-import { Slider } from '../components/ui/slider';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { ShieldCheck, Lock, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Lock } from 'lucide-react';
 import TierBadge from '../components/TierBadge';
 import ProofOfDisclosure from '../components/ProofOfDisclosure';
 
-// Max scores for each criterion
-const maxScores = {
-  technical: 25,
-  novelty: 20,
-  team: 20,
-  pilot_readiness: 20,
-  cost: 15
-};
+// R1 score criteria — labels swap by round
+const getCriteria = (round) => [
+  { key: 'score_problem_solution_fit', label: 'Problem–Solution Fit' },
+  { key: 'score_innovation',            label: 'Innovation & Uniqueness' },
+  {
+    key: 'score_feasibility',
+    label: round === 'round2_prototype'
+      ? 'Execution Quality'
+      : 'Feasibility & Technical Readiness',
+  },
+  { key: 'score_impact_sustainability', label: 'Impact & Sustainability' },
+  {
+    key: 'score_presentation',
+    label: round === 'round2_prototype'
+      ? 'Demo & Results'
+      : 'Presentation & Supporting Evidence',
+  },
+];
+
+function ScoreSlider({ label, value, onChange, disabled }) {
+  return (
+    <div>
+      <div className="flex justify-between text-sm mb-1">
+        <span className="text-[--text-secondary]">{label}</span>
+        <span className="font-medium text-[--text-primary]">{value}/10</span>
+      </div>
+      <input
+        type="range"
+        min={0} max={10} step={1}
+        value={value}
+        onChange={e => onChange(Number(e.target.value))}
+        disabled={disabled}
+        className="w-full h-2 rounded-full appearance-none bg-gray-200 accent-[--gov-accent] cursor-pointer"
+      />
+      <div className="text-[10px] text-gray-400 mt-0.5">0–3 Weak · 4–7 Adequate · 8–10 Strong</div>
+    </div>
+  );
+}
 
 export default function ScoreApplication() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [application, setApplication] = useState(null);
   const [coi, setCoi] = useState(false);
+  const [round, setRound] = useState('round1_application');
   const [scores, setScores] = useState({
-    technical: 0,
-    novelty: 0,
-    team: 0,
-    pilot_readiness: 0,
-    cost: 0
+    score_problem_solution_fit:  0,
+    score_innovation:             0,
+    score_feasibility:            0,
+    score_impact_sustainability:  0,
+    score_presentation:           0,
   });
   const [comments, setComments] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchApp = async () => {
-      try {
-        const app = await api.getApplication(id);
-        setApplication(app);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchApp();
+    api.getApplication(id).then(app => {
+      setApplication(app);
+      if (app.round) setRound(app.round);
+    }).catch(console.error).finally(() => setLoading(false));
   }, [id]);
 
-  const handleScoreChange = (field, value) => {
-    setScores(prev => ({
-      ...prev,
-      [field]: value[0]
-    }));
-  };
-
-  const totalScore = scores.technical + scores.novelty + scores.team + scores.pilot_readiness + scores.cost;
+  const criteria = getCriteria(round);
+  const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
 
   const handleSubmit = async () => {
-    const payload = {
-      application: id,
-      score_technical: scores.technical,
-      score_novelty: scores.novelty,
-      score_team: scores.team,
-      score_pilot_readiness: scores.pilot_readiness,
-      score_cost: scores.cost,
-      comments,
-      conflict_of_interest: coi
-    };
     try {
-      await api.createEvaluation(payload);
+      await api.createEvaluation({
+        application: id,
+        round,
+        ...scores,
+        comments,
+        conflict_of_interest: coi,
+      });
       navigate('/evaluate');
     } catch (err) {
       console.error(err);
     }
   };
 
-  // Check if solution should be redacted
-  const shouldRedact = application && 
-    !['shortlisted', 'contracted'].includes(application.status);
+  const shouldRedact = application && !['shortlisted', 'contracted'].includes(application.status);
 
-  if (loading) return <div className="p-6">Loading...</div>;
+  if (loading) return <div className="p-6">Loading…</div>;
   if (!application) return <div className="p-6">Application not found.</div>;
 
   return (
     <div className="flex gap-8">
-      {/* Left Column - 60% */}
+      {/* Left — 60% */}
       <div className="flex-1 space-y-6">
         <div>
           <h1 className="text-2xl font-space-grotesk font-bold text-[--text-primary]">
             {application.challenge_title || 'Challenge Application'}
           </h1>
           <p className="text-[--text-secondary] mt-1">
-            {application.department_name || `Dept #${application.challenge_department}`}
+            {application.department_name || `Dept #${application.challenge}`}
           </p>
         </div>
-
-        {/* Startup Info */}
         <div className="flex items-center gap-3">
-          <div className="text-lg font-medium text-[--text-primary]">
+          <span className="text-lg font-medium text-[--text-primary]">
             {application.startup_name || `Startup #${application.startup}`}
-          </div>
+          </span>
           {application.startup_registration_status && (
             <TierBadge registrationStatus={application.startup_registration_status} />
           )}
         </div>
-
-        {/* Solution Brief - with redaction if needed */}
         <Card className="rounded-xl border-[--border] shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base">Solution Brief</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="text-base">Solution Brief</CardTitle></CardHeader>
           <CardContent>
             {shouldRedact ? (
               <div className="relative">
@@ -124,147 +128,94 @@ export default function ScoreApplication() {
                 </div>
               </div>
             ) : (
-              <p className="whitespace-pre-wrap text-[--text-secondary]">
-                {application.solution_brief}
-              </p>
+              <p className="whitespace-pre-wrap text-[--text-secondary]">{application.solution_brief}</p>
             )}
           </CardContent>
         </Card>
-
-        {/* Proof of Disclosure */}
         <ProofOfDisclosure application={application} />
       </div>
 
-      {/* Right Column - 40% - Sticky */}
+      {/* Right — 40%, sticky */}
       <div className="w-[400px] flex-shrink-0">
-        <div className="sticky top-8 space-y-6">
-          {/* Total Score Card */}
+        <div className="sticky top-8 space-y-4">
+          {/* Total score spring pop */}
           <Card className="rounded-xl border-[--border] shadow-sm bg-[--accent] text-white">
-            <CardContent className="pt-6">
+            <CardContent className="pt-5">
               <div className="text-sm opacity-80 mb-1">Total Score</div>
-              <motion.div 
+              <motion.div
                 key={totalScore}
                 initial={{ scale: 1.15 }}
                 animate={{ scale: 1 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 15 }}
                 className="text-4xl font-space-grotesk font-bold"
               >
-                {totalScore} / 100
+                {totalScore} / 50
               </motion.div>
             </CardContent>
           </Card>
 
-          {/* COI Toggle */}
+          {/* Round selector */}
           <Card className="rounded-xl border-[--border] shadow-sm">
-            <CardContent className="pt-6">
+            <CardContent className="pt-5">
+              <label className="block text-sm font-medium text-[--text-secondary] mb-1.5">Round</label>
+              <select
+                value={round}
+                onChange={e => setRound(e.target.value)}
+                className="flex h-10 w-full rounded-lg border border-[--border] bg-white px-3 text-sm"
+              >
+                <option value="round1_application">Round 1: Application</option>
+                <option value="round2_prototype">Round 2: Prototype</option>
+              </select>
+            </CardContent>
+          </Card>
+
+          {/* COI */}
+          <Card className="rounded-xl border-[--border] shadow-sm">
+            <CardContent className="pt-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <AlertTriangle size={18} className={coi ? 'text-amber-500' : 'text-gray-400'} />
                   <span className="font-medium text-[--text-primary]">Conflict of Interest</span>
                 </div>
-                <Switch checked={coi} onCheckedChange={setCoi} />
+                <button
+                  type="button"
+                  onClick={() => setCoi(v => !v)}
+                  className={`relative inline-flex h-5 w-9 rounded-full transition-colors ${coi ? 'bg-amber-500' : 'bg-gray-300'}`}
+                >
+                  <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform mt-0.5 ${coi ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </button>
               </div>
-              {coi && (
-                <p className="text-sm text-amber-600 mt-2">
-                  Your score will not be counted due to declared conflict of interest.
-                </p>
-              )}
+              {coi && <p className="text-sm text-amber-600 mt-2">Score will not be counted.</p>}
             </CardContent>
           </Card>
 
-          {/* Scoring Sliders */}
+          {/* Sliders */}
           <Card className={`rounded-xl border-[--border] shadow-sm ${coi ? 'opacity-50' : ''}`}>
-            <CardHeader>
-              <CardTitle className="text-base">Evaluation Criteria</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-[--text-secondary]">Technical Feasibility</span>
-                  <span className="font-medium text-[--text-primary]">{scores.technical}/{maxScores.technical}</span>
-                </div>
-                <Slider 
-                  value={[scores.technical]} 
-                  onValueChange={(v) => handleScoreChange('technical', v)}
-                  max={maxScores.technical}
-                  step={1}
+            <CardHeader><CardTitle className="text-base">Evaluation Criteria</CardTitle></CardHeader>
+            <CardContent className="space-y-5">
+              {criteria.map(c => (
+                <ScoreSlider
+                  key={c.key}
+                  label={c.label}
+                  value={scores[c.key]}
+                  onChange={v => setScores(prev => ({ ...prev, [c.key]: v }))}
                   disabled={coi}
                 />
-              </div>
-
+              ))}
               <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-[--text-secondary]">Novelty</span>
-                  <span className="font-medium text-[--text-primary]">{scores.novelty}/{maxScores.novelty}</span>
-                </div>
-                <Slider 
-                  value={[scores.novelty]} 
-                  onValueChange={(v) => handleScoreChange('novelty', v)}
-                  max={maxScores.novelty}
-                  step={1}
+                <label className="block text-sm font-medium text-[--text-primary] mb-1.5">Comments</label>
+                <Textarea
+                  value={comments}
+                  onChange={e => setComments(e.target.value)}
+                  rows={3}
                   disabled={coi}
+                  placeholder="Evaluation notes…"
                 />
               </div>
-
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-[--text-secondary]">Team Capability</span>
-                  <span className="font-medium text-[--text-primary]">{scores.team}/{maxScores.team}</span>
-                </div>
-                <Slider 
-                  value={[scores.team]} 
-                  onValueChange={(v) => handleScoreChange('team', v)}
-                  max={maxScores.team}
-                  step={1}
-                  disabled={coi}
-                />
-              </div>
-
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-[--text-secondary]">Pilot Readiness</span>
-                  <span className="font-medium text-[--text-primary]">{scores.pilot_readiness}/{maxScores.pilot_readiness}</span>
-                </div>
-                <Slider 
-                  value={[scores.pilot_readiness]} 
-                  onValueChange={(v) => handleScoreChange('pilot_readiness', v)}
-                  max={maxScores.pilot_readiness}
-                  step={1}
-                  disabled={coi}
-                />
-              </div>
-
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-[--text-secondary]">Cost Efficiency</span>
-                  <span className="font-medium text-[--text-primary]">{scores.cost}/{maxScores.cost}</span>
-                </div>
-                <Slider 
-                  value={[scores.cost]} 
-                  onValueChange={(v) => handleScoreChange('cost', v)}
-                  max={maxScores.cost}
-                  step={1}
-                  disabled={coi}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[--text-primary] mb-2">
-                  Comments
-                </label>
-                <Textarea 
-                  value={comments} 
-                  onChange={(e) => setComments(e.target.value)}
-                  rows={4}
-                  placeholder="Add your evaluation comments..."
-                  disabled={coi}
-                />
-              </div>
-
-              <Button 
-                onClick={handleSubmit} 
-                className="w-full bg-[--gov-accent] hover:bg-[--gov-accent-light] text-white"
+              <Button
+                onClick={handleSubmit}
                 disabled={coi}
+                className="w-full bg-[--gov-accent] hover:bg-[--gov-accent-light] text-white"
               >
                 Submit Evaluation
               </Button>
