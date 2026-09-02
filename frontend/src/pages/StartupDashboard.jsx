@@ -248,10 +248,10 @@ export default function StartupDashboard() {
         <TabsContent value="overview">
           <div className="space-y-6">
             <div className="grid grid-cols-4 gap-4">
-              <StatCard icon={FileText}  value={applications.length}  label="Applications"    color="indigo" />
-              <StatCard icon={Star}      value={qualified}             label="Qualified"        color="amber"  />
-              <StatCard icon={CheckCircle} value={prototypes}          label="Prototypes Built" color="teal"   />
-              <StatCard icon={CheckCircle} value={contracted}          label="Contracts Won"    color="green"  />
+              <Stat3DCard icon={FileText}    value={applications.length} label="Applications"    accentColor="#4F46E5" index={0} />
+              <Stat3DCard icon={Star}        value={qualified}            label="Qualified"        accentColor="#D97706" index={1} />
+              <Stat3DCard icon={CheckCircle} value={prototypes}           label="Prototypes Built" accentColor="#0D9488" index={2} />
+              <Stat3DCard icon={CheckCircle} value={contracted}           label="Contracts Won"    accentColor="#16A34A" index={3} />
             </div>
             {/* Recommended challenges */}
             {challenges.length > 0 && (
