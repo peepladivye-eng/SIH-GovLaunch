@@ -101,6 +101,11 @@ class Command(BaseCommand):
             eligibility_rules={'requires_dpiit': True, 'min_team_size': 0, 'requires_no_blacklist': True, 'min_turnover_required': False}
         )
 
+        self.stdout.write("Creating Evaluators and Admin...")
+        ev1 = User.objects.create_user(username='evaluator1', password='demo1234', role='evaluator')
+        ev2 = User.objects.create_user(username='evaluator2', password='demo1234', role='evaluator')
+        User.objects.create_superuser(username='admin', password='demo1234', role='admin')
+
         self.stdout.write("Creating Applications...")
         solution_briefs = {
             'MediTriage AI': 'We propose deploying our NLP-based triage engine at 5 pilot PHCs, integrating with the existing teleconsultation queue system. Our model classifies patient symptoms into urgency tiers within 30 seconds, routing critical cases directly to available specialists. We project a 40-45% reduction in average wait times based on our urban clinic pilot data.',
