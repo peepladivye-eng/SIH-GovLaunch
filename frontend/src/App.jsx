@@ -80,32 +80,32 @@ function AppRoutes() {
         <Route path="/signup/department" element={<PublicLayout><SignupDepartment /></PublicLayout>} />
 
         {/* Startup */}
-        <Route path="/dashboard"         element={<ProtectedRoute allowedRoles={['startup']}><StartupLayout><StartupDashboard /></StartupLayout></ProtectedRoute>} />
-        <Route path="/discover"          element={<ProtectedRoute allowedRoles={['startup']}><StartupLayout><DiscoverChallenges /></StartupLayout></ProtectedRoute>} />
-        <Route path="/discover/:id"      element={<ProtectedRoute allowedRoles={['startup']}><StartupLayout><ApplyToChallenge /></StartupLayout></ProtectedRoute>} />
-        <Route path="/my-applications"   element={<ProtectedRoute allowedRoles={['startup']}><StartupLayout><MyApplications /></StartupLayout></ProtectedRoute>} />
+        <Route path="/dashboard"         element={<ProtectedRoute allowedRoles={['startup']}><AppLayout><StartupDashboard /></AppLayout></ProtectedRoute>} />
+        <Route path="/discover"          element={<ProtectedRoute allowedRoles={['startup']}><AppLayout><DiscoverChallenges /></AppLayout></ProtectedRoute>} />
+        <Route path="/discover/:id"      element={<ProtectedRoute allowedRoles={['startup']}><AppLayout><ApplyToChallenge /></AppLayout></ProtectedRoute>} />
+        <Route path="/my-applications"   element={<ProtectedRoute allowedRoles={['startup']}><AppLayout><MyApplications /></AppLayout></ProtectedRoute>} />
 
         {/* Department */}
-        <Route path="/challenges"        element={<ProtectedRoute allowedRoles={['department']}><GovernmentLayout><MyChallenges /></GovernmentLayout></ProtectedRoute>} />
-        <Route path="/challenges/new"    element={<ProtectedRoute allowedRoles={['department']}><GovernmentLayout><PostChallenge /></GovernmentLayout></ProtectedRoute>} />
-        <Route path="/challenges/:id"    element={<ProtectedRoute allowedRoles={['department']}><GovernmentLayout><ChallengeDetail /></GovernmentLayout></ProtectedRoute>} />
+        <Route path="/challenges"        element={<ProtectedRoute allowedRoles={['department']}><AppLayout><MyChallenges /></AppLayout></ProtectedRoute>} />
+        <Route path="/challenges/new"    element={<ProtectedRoute allowedRoles={['department']}><AppLayout><PostChallenge /></AppLayout></ProtectedRoute>} />
+        <Route path="/challenges/:id"    element={<ProtectedRoute allowedRoles={['department']}><AppLayout><ChallengeDetail /></AppLayout></ProtectedRoute>} />
 
         {/* Shared */}
-        <Route path="/applications/:id"           element={<ProtectedRoute allowedRoles={['department','evaluator','admin']}><GovernmentLayout><ApplicationDetail /></GovernmentLayout></ProtectedRoute>} />
-        <Route path="/applications/:id/contract"  element={<ProtectedRoute allowedRoles={['department']}><GovernmentLayout><GenerateContract /></GovernmentLayout></ProtectedRoute>} />
+        <Route path="/applications/:id"           element={<ProtectedRoute allowedRoles={['department','evaluator','admin']}><AppLayout><ApplicationDetail /></AppLayout></ProtectedRoute>} />
+        <Route path="/applications/:id/contract"  element={<ProtectedRoute allowedRoles={['department']}><AppLayout><GenerateContract /></AppLayout></ProtectedRoute>} />
 
         {/* Evaluator */}
-        <Route path="/evaluate"          element={<ProtectedRoute allowedRoles={['evaluator']}><GovernmentLayout><EvaluatorReview /></GovernmentLayout></ProtectedRoute>} />
-        <Route path="/evaluate/:id"      element={<ProtectedRoute allowedRoles={['evaluator']}><GovernmentLayout><ScoreApplication /></GovernmentLayout></ProtectedRoute>} />
+        <Route path="/evaluate"          element={<ProtectedRoute allowedRoles={['evaluator']}><AppLayout><EvaluatorReview /></AppLayout></ProtectedRoute>} />
+        <Route path="/evaluate/:id"      element={<ProtectedRoute allowedRoles={['evaluator']}><AppLayout><ScoreApplication /></AppLayout></ProtectedRoute>} />
 
         {/* All roles */}
-        <Route path="/catalog"           element={<ProtectedRoute><GovernmentLayout><ScaleUpCatalog /></GovernmentLayout></ProtectedRoute>} />
+        <Route path="/catalog"           element={<ProtectedRoute><AppLayout><ScaleUpCatalog /></AppLayout></ProtectedRoute>} />
 
         {/* Department supervision */}
-        <Route path="/supervision"       element={<ProtectedRoute allowedRoles={['department']}><GovernmentLayout><Supervision /></GovernmentLayout></ProtectedRoute>} />
+        <Route path="/supervision"       element={<ProtectedRoute allowedRoles={['department']}><AppLayout><Supervision /></AppLayout></ProtectedRoute>} />
 
         {/* Admin */}
-        <Route path="/audit"             element={<ProtectedRoute allowedRoles={['admin']}><GovernmentLayout><AuditTrail /></GovernmentLayout></ProtectedRoute>} />
+        <Route path="/audit"             element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AuditTrail /></AppLayout></ProtectedRoute>} />
       </Routes>
     </AnimatePresence>
   );
