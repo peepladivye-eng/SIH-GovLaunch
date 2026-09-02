@@ -191,49 +191,135 @@ export default function StartupDashboard() {
   const contracted  = applications.filter(a => a.status === 'contracted').length;
 
   return (
-    <div className="space-y-6">
-      {/* Header card */}
-      <div className="bg-[--bg] rounded-2xl p-6 text-white relative overflow-hidden">
-        <div className="relative z-10">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-2xl font-space-grotesk font-bold">{startupData?.name || user.name}</h1>
-                {startupData?.registration_status && (
-                  <TierBadge registrationStatus={startupData.registration_status} />
-                )}
+    <div style={{ minHeight: '100vh', background: '#F4F6FB' }}>
+
+      {/* ── Hero Header Card ── */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+        style={{
+          position: 'relative', overflow: 'hidden', borderRadius: 20, marginBottom: 24,
+          background: 'linear-gradient(135deg, #0D1117 0%, #0A0E1A 50%, #0C1020 100%)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          padding: '32px 36px',
+          boxShadow: '0 8px 40px rgba(0,0,0,0.2)',
+        }}
+      >
+        {/* Ambient orbs */}
+        <motion.div animate={{ x: [0,20,0], y: [0,-15,0] }} transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ position: 'absolute', top: -40, left: -40, width: 280, height: 280, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <motion.div animate={{ x: [0,-15,0], y: [0,20,0] }} transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
+          style={{ position: 'absolute', bottom: -30, right: -30, width: 220, height: 220, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(13,148,136,0.18) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+        {/* Subtle grid */}
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 20,
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+          maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 50%, transparent 100%)',
+        }} />
+
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24 }}>
+          {/* Left — identity */}
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+              {/* Avatar */}
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                style={{
+                  width: 48, height: 48, borderRadius: 14, flexShrink: 0,
+                  background: 'linear-gradient(135deg, #4F46E5, #7C3AED)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 0 0 2px rgba(255,255,255,0.1), 0 4px 16px rgba(79,70,229,0.4)',
+                  fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 800, color: '#fff',
+                }}
+              >
+                {(startupData?.name || user.name || 'S').charAt(0).toUpperCase()}
+              </motion.div>
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 24, fontWeight: 800, color: '#fff', margin: 0, lineHeight: 1.2 }}>
+                    {startupData?.name || user.name}
+                  </h1>
+                  {startupData?.registration_status && (
+                    <TierBadge registrationStatus={startupData.registration_status} />
+                  )}
+                </div>
+                {/* Sector tags */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                  {(startupData?.sector_tags ?? []).map(t => (
+                    <motion.span
+                      key={t}
+                      whileHover={{ scale: 1.05 }}
+                      style={{
+                        padding: '3px 10px', borderRadius: 100, fontSize: 11, fontWeight: 600,
+                        background: 'rgba(99,102,241,0.2)', color: '#818CF8',
+                        border: '1px solid rgba(99,102,241,0.3)', letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {t}
+                    </motion.span>
+                  ))}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {(startupData?.sector_tags ?? []).map(t => (
-                  <span key={t} className="px-2 py-0.5 bg-white/10 rounded-full text-xs">{t}</span>
-                ))}
-              </div>
-              {startupData?.pitch_summary && (
-                <p className="text-sm text-gray-400 max-w-lg">{startupData.pitch_summary}</p>
-              )}
             </div>
 
-            {/* Rating widget — R10: {rating}/2000 */}
-            <div className="text-right">
-              <div className="text-3xl font-space-grotesk font-bold text-white">{rating}</div>
-              <div className="text-xs text-gray-400">/ 2000</div>
-              <div className="mt-1">
-                <RatingTierBadge rating={rating} size={32} />
-              </div>
-              <div className="mt-2">
-                <Sparkline deltas={deltas} />
-              </div>
-              {/* R10 progress bar */}
-              <div className="mt-2 w-24 h-1.5 bg-white/20 rounded-full ml-auto">
-                <div
-                  className="h-full rounded-full bg-white"
-                  style={{ width: `${Math.min(rating, 2000) / 2000 * 100}%` }}
-                />
-              </div>
-            </div>
+            {startupData?.pitch_summary && (
+              <p style={{ fontSize: 14, color: '#64748B', maxWidth: 520, lineHeight: 1.6, margin: '12px 0 0' }}>
+                {startupData.pitch_summary}
+              </p>
+            )}
           </div>
+
+          {/* Right — Rating widget */}
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            style={{
+              textAlign: 'right', flexShrink: 0,
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 16, padding: '20px 24px',
+              backdropFilter: 'blur(8px)',
+              minWidth: 160,
+            }}
+          >
+            <div style={{ fontSize: 11, color: '#475569', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>
+              Rating
+            </div>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 42, fontWeight: 800, color: '#fff', lineHeight: 1 }}>
+              {rating}
+            </div>
+            <div style={{ fontSize: 13, color: '#475569', marginBottom: 12 }}>/ 2000</div>
+
+            {/* Tier badge */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+              <RatingTierBadge rating={rating} size={36} />
+            </div>
+
+            {/* Sparkline */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+              <Sparkline deltas={deltas} />
+            </div>
+
+            {/* Progress bar */}
+            <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 100, height: 4, overflow: 'hidden' }}>
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(rating, 2000) / 2000 * 100}%` }}
+                transition={{ duration: 1.2, ease: 'easeOut', delay: 0.5 }}
+                style={{ height: '100%', background: 'linear-gradient(90deg, #4F46E5, #7C3AED)', borderRadius: 100 }}
+              />
+            </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Tabs */}
       <Tabs defaultValue="overview">
