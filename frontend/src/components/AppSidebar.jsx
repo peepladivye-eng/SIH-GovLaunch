@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useSpring } from 'motion/react';
 import {
   LayoutDashboard, Search, FileText, Database,
   Target, Plus, ShieldCheck, Eye, Shield, LogOut,
