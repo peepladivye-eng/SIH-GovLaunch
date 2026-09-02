@@ -115,6 +115,20 @@ export const api = {
   getNoveltyCheck: (applicationId) =>
     request(`/api/applications/${applicationId}/novelty-check/`).catch(() => null),
 
+  // R2 — Rating
+  finalizeRound: (challengeId, round) =>
+    request(`/api/challenges/${challengeId}/finalize-round/`, { method: 'POST', body: JSON.stringify({ round }) }),
+  getStartupRatingHistory: (startupId) =>
+    request(`/api/startups/${startupId}/rating-history/`),
+
+  // R3 — Badges
+  getStartupBadges: (startupId) =>
+    request(`/api/startups/${startupId}/badges/`),
+
+  // R7 — Prototype
+  startPrototypePhase: (applicationId) =>
+    request(`/api/applications/${applicationId}/start-prototype-phase/`, { method: 'POST' }),
+
   // Admin
   resetDemo: () => request('/api/admin/reset-demo/', { method: 'POST' }),
 };
