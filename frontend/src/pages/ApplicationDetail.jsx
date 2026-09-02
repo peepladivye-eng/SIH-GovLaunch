@@ -36,6 +36,7 @@ export default function ApplicationDetail() {
   const [noveltyCheck, setNoveltyCheck] = useState(null);
   const [noveltyLoading, setNoveltyLoading] = useState(false);
   const [noveltyError, setNoveltyError] = useState('');
+  const [protoStarting, setProtoStarting] = useState(false);
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   useEffect(() => {
