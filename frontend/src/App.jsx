@@ -55,18 +55,18 @@ const PageWrapper = ({ children }) => (
 
 // ── Layout shells ─────────────────────────────────────────────────────────────
 const StartupLayout = ({ children }) => (
-  <div className="flex min-h-screen bg-[--surface-alt]">
+  <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#F4F6FB' }}>
     <StartupSidebar />
-    <main className="flex-1 ml-[260px] p-8">
+    <main style={{ flex: 1, marginLeft: 260, padding: 32, minWidth: 0 }}>
       <PageWrapper>{children}</PageWrapper>
     </main>
   </div>
 );
 
 const GovernmentLayout = ({ children }) => (
-  <div className="flex min-h-screen bg-[--surface-alt]">
+  <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#F4F6FB' }}>
     <GovernmentSidebar />
-    <main className="flex-1 ml-[260px] p-8">
+    <main style={{ flex: 1, marginLeft: 260, padding: 32, minWidth: 0 }}>
       <PageWrapper>{children}</PageWrapper>
     </main>
   </div>
