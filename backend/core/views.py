@@ -573,3 +573,196 @@ def novelty_check(request, pk):
         target=f'Application #{pk}',
     )
     return Response(NoveltyCheckSerializer(nc).data)
+
+
+# ── R2: Finalize Round endpoint ───────────────────────────────────────────────
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def finalize_round(request, challenge_id):
+    """
+    POST /api/challenges/<id>/finalize-round/
+    Body: {"round": "round1_application" | "round2_prototype"}
+    Department only, scoped to own challenge.
+    """
+    from .badges import award_badge, BADGE_CATALOG
+
+    user = request.user
+    if user.role != 'department' or not hasattr(user, 'department'):
+        return Response({'error': 'Department access only.'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        challenge = Challenge.objects.get(pk=challenge_id, department=user.department)
+    except Challenge.DoesNotExist:
+        return Response({'error': 'Challenge not found or not yours.'}, status=status.HTTP_404_NOT_FOUND)
+
+    round_key = request.data.get('round', 'round1_application')
+    if round_key not in ('round1_application', 'round2_prototype'):
+        return Response({'error': 'Invalid round.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Get all applications with at least one non-COI evaluation for this round
+    apps = Application.objects.filter(challenge=challenge).prefetch_related('evaluation_set')
+
+    scored_apps = []
+    for app in apps:
+        evals = app.evaluation_set.filter(round=round_key, conflict_of_interest=False)
+        if not evals.exists():
+            continue
+        # Skip if already has a RatingHistory row for this challenge+round (idempotency)
+        if RatingHistory.objects.filter(application=app, round=round_key).exists():
+            continue
+        avg = sum(e.total_score for e in evals) / len(evals)
+        scored_apps.append({'app': app, 'score': avg, 'evals': list(evals)})
+
+    if not scored_apps:
+        return Response({'message': 'No new applications to score for this round.', 'results': []})
+
+    cohort_average = sum(s['score'] for s in scored_apps) / len(scored_apps)
+
+    # Find top impact/innovation for champion badges
+    top_impact = max(scored_apps, key=lambda x: max(
+        (e.score_impact_sustainability for e in x['evals']), default=0))
+    top_innovation = max(scored_apps, key=lambda x: max(
+        (e.score_innovation for e in x['evals']), default=0))
+    max_impact_score = max(
+        (e.score_impact_sustainability for e in top_impact['evals']), default=0)
+    max_innovation_score = max(
+        (e.score_innovation for e in top_innovation['evals']), default=0)
+
+    results = []
+    for item in scored_apps:
+        app    = item['app']
+        score  = item['score']
+        startup = app.startup
+
+        delta = max(0, round(20 * (score - cohort_average) / 50))
+        startup.rating += delta
+        startup.save(update_fields=['rating'])
+
+        RatingHistory.objects.create(
+            startup=startup, application=app, round=round_key,
+            score=round(score), cohort_average=cohort_average,
+            delta=delta, rating_after=startup.rating,
+        )
+
+        # Badges
+        if round_key == 'round1_application':
+            if score >= cohort_average:
+                award_badge(startup, 'round1_qualifier')
+            if score >= 40:
+                award_badge(startup, 'high_performer')
+        elif round_key == 'round2_prototype':
+            if score >= cohort_average:
+                award_badge(startup, 'round2_qualifier')
+
+        # Champion badges — tied = all get it
+        if max_impact_score > 0:
+            for s_item in scored_apps:
+                if max(
+                    (e.score_impact_sustainability for e in s_item['evals']), default=0
+                ) == max_impact_score:
+                    award_badge(s_item['app'].startup, 'sustainability_champion')
+
+        if max_innovation_score > 0:
+            for s_item in scored_apps:
+                if max(
+                    (e.score_innovation for e in s_item['evals']), default=0
+                ) == max_innovation_score:
+                    award_badge(s_item['app'].startup, 'innovation_excellence')
+
+        AuditLog.objects.create(
+            actor=user.username,
+            action=f'Finalized {round_key} — delta +{delta}',
+            target=f'Application #{app.id} ({startup.name})',
+        )
+
+        results.append({
+            'application_id': app.id,
+            'startup_name':   startup.name,
+            'score':          round(score),
+            'delta':          delta,
+            'new_rating':     startup.rating,
+        })
+
+    return Response({
+        'cohort_average': round(cohort_average, 2),
+        'results':        results,
+    })
+
+
+# ── R7: Prototype phase endpoints ─────────────────────────────────────────────
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def start_prototype_phase(request, pk):
+    """POST /api/applications/<id>/start-prototype-phase/"""
+    from datetime import timedelta
+    from django.utils import timezone
+    from .badges import award_badge
+
+    user = request.user
+    if user.role != 'department' or not hasattr(user, 'department'):
+        return Response({'error': 'Department access only.'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        app = Application.objects.select_related('challenge__department').get(pk=pk)
+    except Application.DoesNotExist:
+        return Response({'error': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if app.challenge.department != user.department:
+        return Response({'error': 'Not your challenge.'}, status=status.HTTP_403_FORBIDDEN)
+
+    if app.status != 'shortlisted':
+        return Response({'error': 'Application must be shortlisted.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if app.prototype_start_date:
+        return Response({'error': 'Prototype phase already started.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    now = timezone.now()
+    app.prototype_start_date = now
+    app.prototype_deadline   = now + timedelta(days=30)
+    app.save(update_fields=['prototype_start_date', 'prototype_deadline'])
+
+    AuditLog.objects.create(
+        actor=user.username,
+        action='Started prototype phase',
+        target=f'Application #{pk}',
+    )
+    return Response(ApplicationSerializer(app).data)
+
+
+# ── R3: Startup badges endpoint ────────────────────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def startup_badges(request, pk):
+    """GET /api/startups/<id>/badges/"""
+    from .badges import BADGE_CATALOG
+
+    try:
+        startup = Startup.objects.get(pk=pk)
+    except Startup.DoesNotExist:
+        return Response({'error': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    earned = StartupBadge.objects.filter(startup=startup).order_by('-earned_at')
+    result = []
+    for sb in earned:
+        meta = BADGE_CATALOG.get(sb.badge_key, {})
+        result.append({
+            'badge_key': sb.badge_key,
+            'label':     meta.get('label', sb.badge_key),
+            'icon':      meta.get('icon', 'Award'),
+            'desc':      meta.get('desc', ''),
+            'earned_at': sb.earned_at.isoformat(),
+        })
+    return Response(result)
+
+
+# ── R2: Rating history for a startup ──────────────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def startup_rating_history(request, pk):
+    """GET /api/startups/<id>/rating-history/"""
+    history = RatingHistory.objects.filter(startup_id=pk).order_by('-created_at')[:20]
+    return Response(RatingHistorySerializer(history, many=True).data)
