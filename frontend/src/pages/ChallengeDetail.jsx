@@ -29,6 +29,10 @@ export default function ChallengeDetail() {
   const [rejectedCount, setRejectedCount] = useState(0);
   const [showRejected, setShowRejected] = useState(false);
   const [rejectedApps, setRejectedApps] = useState([]);
+  const [finalizeRound, setFinalizeRound] = useState('round1_application');
+  const [finalizeResult, setFinalizeResult] = useState(null);
+  const [finalizing, setFinalizing] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchDetail = async () => {
