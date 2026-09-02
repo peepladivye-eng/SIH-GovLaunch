@@ -156,11 +156,6 @@ class Command(BaseCommand):
             conflict_of_interest=False,
         )
 
-        self.stdout.write("Creating Evaluators and Admin...")
-        ev1 = User.objects.create_user(username='evaluator1', password='demo1234', role='evaluator')
-        ev2 = User.objects.create_user(username='evaluator2', password='demo1234', role='evaluator')
-        User.objects.create_superuser(username='admin', password='demo1234', role='admin')
-
         self.stdout.write("Creating ScaleUpEntries...")
         ScaleUpEntry.objects.create(
             original_challenge_title='AI-Based Patient Triage Pilot — Nashik PHC Network',
