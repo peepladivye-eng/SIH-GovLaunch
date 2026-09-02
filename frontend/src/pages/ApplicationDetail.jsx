@@ -132,6 +132,15 @@ export default function ApplicationDetail() {
       <div className="grid grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="col-span-2 space-y-6">
+          {/* R8 — Startup Trust Profile (dept/evaluator only) */}
+          {['department', 'evaluator', 'admin'].includes(user.role) && application.startup && (
+            <StartupTrustProfile
+              startupId={application.startup}
+              startupName={application.startup_name}
+              rating={application.startup_rating ?? 1000}
+            />
+          )}
+
           {/* Startup Info */}
           <Card className="rounded-xl border-[--border] shadow-sm">
             <CardContent className="pt-6">
