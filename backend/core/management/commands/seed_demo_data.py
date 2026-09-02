@@ -136,6 +136,7 @@ class Command(BaseCommand):
                 content_hash=hashlib.sha256(brief.encode()).hexdigest(),
             )
             apps.append(app)
+            award_badge(s_obj, 'first_application')
             EligibilityResult.objects.create(application=app, rule_name='requires_dpiit', passed=True,
                 reason='Startup holds valid DPIIT recognition (ID present).' if s_obj.registration_status == 'dpiit_recognized' else
                        ('Startup is incorporated; DPIIT recognition pending. Eligible to apply and be evaluated; DPIIT recognition required before final contracting.' if s_obj.registration_status == 'incorporated' else
