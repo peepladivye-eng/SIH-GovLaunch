@@ -147,13 +147,31 @@ class Command(BaseCommand):
         Evaluation.objects.create(
             application=greenbridge_app,
             evaluator=ev1,
-            score_technical=20,
-            score_novelty=15,
-            score_team=14,
-            score_pilot_readiness=15,
-            score_cost=12,
+            round='round1_application',
+            score_problem_solution_fit=8,
+            score_innovation=7,
+            score_feasibility=7,
+            score_impact_sustainability=8,
+            score_presentation=8,
             comments='Innovative low-cost approach with strong pilot readiness for rural deployment.',
             conflict_of_interest=False,
+        )
+        # Add evaluations for the under_evaluation apps too (MediTriage and DiagnoAI on c1)
+        meditriage_app = apps[0]
+        diagnoai_app   = apps[1]
+        Evaluation.objects.create(
+            application=meditriage_app, evaluator=ev1,
+            round='round1_application',
+            score_problem_solution_fit=9, score_innovation=8,
+            score_feasibility=9, score_impact_sustainability=8, score_presentation=8,
+            comments='Excellent fit with the health triage problem.', conflict_of_interest=False,
+        )
+        Evaluation.objects.create(
+            application=diagnoai_app, evaluator=ev2,
+            round='round1_application',
+            score_problem_solution_fit=7, score_innovation=7,
+            score_feasibility=8, score_impact_sustainability=7, score_presentation=7,
+            comments='Good solution, solid execution track record.', conflict_of_interest=False,
         )
 
         self.stdout.write("Creating ScaleUpEntries...")
