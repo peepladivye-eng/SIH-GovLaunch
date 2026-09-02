@@ -1,239 +1,301 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-import { FileText, Star, CheckCircle, Clock, ArrowRight } from 'lucide-react';
+import { FileText, Star, CheckCircle, Clock, Activity } from 'lucide-react';
 import { api } from '../lib/api';
 import StatCard from '../components/StatCard';
-import { Card } from '../components/ui/card';
-import { Button } from '../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import TierBadge from '../components/TierBadge';
+import BadgeIcon, { RatingTierBadge } from '../components/BadgeIcon';
+import { getRatingTier, RATING_TIERS } from '../lib/ratingTiers';
+import { BADGE_CATALOG } from '../lib/badgeCatalog';
 
-// Simple date diff for relative timestamps
-const getRelativeTime = (dateString) => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-  
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return `${diffDays}d ago`;
+// Simple SVG sparkline for last 5 rating deltas
+function Sparkline({ deltas }) {
+  if (!deltas || deltas.length < 2) return null;
+  const vals = deltas.slice(-5);
+  const min = Math.min(0, ...vals);
+  const max = Math.max(1, ...vals);
+  const range = max - min || 1;
+  const w = 80, h = 24, pad = 2;
+  const pts = vals.map((v, i) => {
+    const x = pad + (i / (vals.length - 1)) * (w - pad * 2);
+    const y = h - pad - ((v - min) / range) * (h - pad * 2);
+    return `${x},${y}`;
+  }).join(' ');
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+      <polyline points={pts} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+const getRelativeTime = (d) => {
+  const diff = Date.now() - new Date(d);
+  const m = Math.floor(diff / 60000), h = Math.floor(diff / 3600000), dy = Math.floor(diff / 86400000);
+  if (m < 60) return `${m}m ago`;
+  if (h < 24) return `${h}h ago`;
+  return `${dy}d ago`;
 };
+
+const BADGE_ELEMENTS = [
+  { icon: '🛡', label: 'Shield = Trust & Security' },
+  { icon: '⭐', label: 'Star = Excellence & Quality' },
+  { icon: '🔰', label: 'Icon overlay = Achievement type' },
+  { icon: '👑', label: 'Crown = Top Performer' },
+];
 
 export default function StartupDashboard() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const [stats, setStats] = useState({
-    activeApplications: 0,
-    shortlisted: 0,
-    contracted: 0
-  });
+  const [startupData, setStartupData] = useState(null);
+  const [applications, setApplications] = useState([]);
+  const [ratingHistory, setRatingHistory] = useState([]);
+  const [badges, setBadges] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
   const [challenges, setChallenges] = useState([]);
-  const [recentActivity, setRecentActivity] = useState([]);
-  const [myApplications, setMyApplications] = useState([]);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchAll = async () => {
       try {
-        const [appsRaw, challengesRaw, meData] = await Promise.all([
+        const [me, apps, chals] = await Promise.all([
+          api.me(),
           api.getApplications(),
           api.getChallenges(),
-          api.me(),
         ]);
+        const appList = Array.isArray(apps) ? apps : (apps?.results ?? []);
+        setApplications(appList);
+        setChallenges(Array.isArray(chals) ? chals : (chals?.results ?? []));
+        setStartupData(me);
 
-        // Handle paginated or plain array
-        const apps = Array.isArray(appsRaw) ? appsRaw
-          : Array.isArray(appsRaw?.results) ? appsRaw.results : [];
-        const allChallenges = Array.isArray(challengesRaw) ? challengesRaw
-          : Array.isArray(challengesRaw?.results) ? challengesRaw.results : [];
-
-        const activeStatuses = ['submitted', 'screening', 'eligible', 'under_evaluation'];
-        setStats({
-          activeApplications: apps.filter(a => activeStatuses.includes(a.status)).length,
-          shortlisted:        apps.filter(a => a.status === 'shortlisted').length,
-          contracted:         apps.filter(a => a.status === 'contracted').length,
-        });
-
-        setMyApplications(apps);
-
-        // Recommended challenges — sector match
-        const mySectors = meData.sector_tags || [];
-        const open = allChallenges.filter(c => ['open', 'published'].includes(c.status));
-        const recommended = mySectors.length > 0
-          ? open.filter(c => {
-              const tags = Array.isArray(c.sector_tags)
-                ? c.sector_tags
-                : String(c.sector_tags || '').split(',').map(s => s.trim());
-              return tags.some(t => mySectors.includes(t));
-            })
-          : open;
-        setChallenges(recommended.slice(0, 4));
-
+        if (me.startup_id) {
+          const [history, earnedBadges, logs] = await Promise.all([
+            api.getStartupRatingHistory(me.startup_id),
+            api.getStartupBadges(me.startup_id),
+            api.getAuditLogs().catch(() => []),
+          ]);
+          setRatingHistory(Array.isArray(history) ? history : []);
+          setBadges(Array.isArray(earnedBadges) ? earnedBadges : []);
+          const logList = Array.isArray(logs) ? logs : (logs?.results ?? []);
+          setAuditLogs(logList.filter(l => l.actor === me.username).slice(0, 20));
+        }
       } catch (err) {
         console.error('Dashboard fetch error:', err);
       }
     };
-    fetchData();
+    fetchAll();
   }, []);
 
-  const getSectorColor = (sector) => {
-    const colors = {
-      'healthtech': 'indigo',
-      'defense-tech': 'slate',
-      'agritech': 'green',
-      'fintech': 'amber',
-      'cleantech': 'teal',
-    };
-    return colors[sector?.toLowerCase()] || 'indigo';
-  };
+  const rating     = startupData?.rating ?? 1000;
+  const tier       = getRatingTier(rating);
+  const deltas     = ratingHistory.map(r => r.delta);
 
-  const formatCurrency = (amount) => {
-    if (!amount) return 'N/A';
-    return new Intl.NumberFormat('en-IN', { 
-      style: 'currency', 
-      currency: 'INR', 
-      maximumFractionDigits: 0 
-    }).format(amount);
-  };
+  // Stats
+  const activeStatuses = ['submitted', 'screening', 'eligible', 'under_evaluation'];
+  const qualified   = badges.filter(b => b.badge_key === 'round1_qualifier' || b.badge_key === 'round2_qualifier').length;
+  const prototypes  = applications.filter(a => a.prototype_start_date).length;
+  const contracted  = applications.filter(a => a.status === 'contracted').length;
 
   return (
-    <div className="space-y-8">
-      {/* Welcome Header */}
-      <div className="flex items-center gap-4">
-        <h1 className="text-2xl font-space-grotesk font-bold text-[--text-primary]">
-          Welcome back, {user.name || 'Startup'}
-        </h1>
-        {user.registration_status && (
-          <TierBadge registrationStatus={user.registration_status} />
-        )}
-      </div>
+    <div className="space-y-6">
+      {/* Header card */}
+      <div className="bg-[--bg] rounded-2xl p-6 text-white relative overflow-hidden">
+        <div className="relative z-10">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <h1 className="text-2xl font-space-grotesk font-bold">{startupData?.name || user.name}</h1>
+                {startupData?.registration_status && (
+                  <TierBadge registrationStatus={startupData.registration_status} />
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {(startupData?.sector_tags ?? []).map(t => (
+                  <span key={t} className="px-2 py-0.5 bg-white/10 rounded-full text-xs">{t}</span>
+                ))}
+              </div>
+              {startupData?.pitch_summary && (
+                <p className="text-sm text-gray-400 max-w-lg">{startupData.pitch_summary}</p>
+              )}
+            </div>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-3 gap-4">
-        <StatCard
-          icon={FileText}
-          value={stats.activeApplications}
-          label="Active Applications"
-          color="indigo"
-          countUp={true}
-        />
-        <StatCard
-          icon={Star}
-          value={stats.shortlisted}
-          label="Shortlisted"
-          color="amber"
-          countUp={true}
-        />
-        <StatCard
-          icon={CheckCircle}
-          value={stats.contracted}
-          label="Contracts"
-          color="green"
-          countUp={true}
-        />
-      </div>
-
-      {/* Recommended Challenges */}
-      {challenges.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold text-[--text-primary] mb-4">
-            Recommended Challenges
-          </h2>
-          <div className="grid grid-cols-2 gap-4">
-            {challenges.map((challenge) => (
-              <Card
-                key={challenge.id}
-                className="p-5 rounded-xl border-[--border] shadow-sm card-hover cursor-pointer"
-                onClick={() => navigate(`/discover/${challenge.id}`)}
-                >
-                  {/* Sector color strip */}
-                  <div 
-                    className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl"
-                    style={{ 
-                      backgroundColor: getSectorColor(
-                        Array.isArray(challenge.sector_tags) 
-                          ? challenge.sector_tags[0] 
-                          : challenge.sector_tags?.split(',')[0]
-                      ) === 'indigo' ? '#4F46E5' :
-                      getSectorColor(
-                        Array.isArray(challenge.sector_tags) 
-                          ? challenge.sector_tags[0] 
-                          : challenge.sector_tags?.split(',')[0]
-                      ) === 'slate' ? '#475569' :
-                      getSectorColor(
-                        Array.isArray(challenge.sector_tags) 
-                          ? challenge.sector_tags[0] 
-                          : challenge.sector_tags?.split(',')[0]
-                      ) === 'green' ? '#10B981' :
-                      getSectorColor(
-                        Array.isArray(challenge.sector_tags) 
-                          ? challenge.sector_tags[0] 
-                          : challenge.sector_tags?.split(',')[0]
-                      ) === 'amber' ? '#F59E0B' : '#0F766E'
-                    }}
-                  />
-                  <div className="pl-3">
-                    <h3 className="font-semibold text-[--text-primary] mb-1">
-                      {challenge.title}
-                    </h3>
-                    <p className="text-sm text-[--text-secondary] mb-3">
-                      {challenge.department_name || `Dept #${challenge.department}`}
-                    </p>
-                    
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {(Array.isArray(challenge.sector_tags) 
-                        ? challenge.sector_tags 
-                        : String(challenge.sector_tags || '').split(',')
-                      ).filter(Boolean).map((tag, i) => (
-                        <span 
-                          key={i}
-                          className="px-2 py-0.5 bg-gray-100 text-[--text-secondary] rounded-full text-xs"
-                        >
-                          {tag.trim()}
-                        </span>
-                      ))}
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-[--text-secondary]">
-                        {formatCurrency(challenge.budget_ceiling)}
-                      </span>
-                      <span className="text-[--text-secondary]">
-                        {challenge.timeline_weeks} weeks
-                      </span>
-                    </div>
-                  </div>
-                </Card>
-            ))}
+            {/* Rating widget — R10: {rating}/2000 */}
+            <div className="text-right">
+              <div className="text-3xl font-space-grotesk font-bold text-white">{rating}</div>
+              <div className="text-xs text-gray-400">/ 2000</div>
+              <div className="mt-1">
+                <RatingTierBadge rating={rating} size={32} />
+              </div>
+              <div className="mt-2">
+                <Sparkline deltas={deltas} />
+              </div>
+              {/* R10 progress bar */}
+              <div className="mt-2 w-24 h-1.5 bg-white/20 rounded-full ml-auto">
+                <div
+                  className="h-full rounded-full bg-white"
+                  style={{ width: `${Math.min(rating, 2000) / 2000 * 100}%` }}
+                />
+              </div>
+            </div>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Recent Activity */}
-      {recentActivity.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold text-[--text-primary] mb-4">
-            Recent Activity
-          </h2>
-          <Card className="p-4 rounded-xl border-[--border] shadow-sm">
-            <div className="space-y-3">
-              {recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-center gap-3 text-sm">
-                  <Clock size={14} className="text-gray-400" />
-                  <span className="text-[--text-secondary]">
-                    {activity.action}
-                  </span>
-                  <span className="text-gray-400 text-xs">
-                    {getRelativeTime(activity.timestamp)}
-                  </span>
+      {/* Tabs */}
+      <Tabs defaultValue="overview">
+        <TabsList className="mb-6">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="applications">Applications</TabsTrigger>
+          <TabsTrigger value="badges">Awards & Badges</TabsTrigger>
+          <TabsTrigger value="activity">Activity Log</TabsTrigger>
+        </TabsList>
+
+        {/* Overview */}
+        <TabsContent value="overview">
+          <div className="space-y-6">
+            <div className="grid grid-cols-4 gap-4">
+              <StatCard icon={FileText}  value={applications.length}  label="Applications"    color="indigo" />
+              <StatCard icon={Star}      value={qualified}             label="Qualified"        color="amber"  />
+              <StatCard icon={CheckCircle} value={prototypes}          label="Prototypes Built" color="teal"   />
+              <StatCard icon={CheckCircle} value={contracted}          label="Contracts Won"    color="green"  />
+            </div>
+            {/* Recommended challenges */}
+            {challenges.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-[--text-primary] mb-3">Open Challenges</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  {challenges.slice(0, 4).map(c => (
+                    <Card key={c.id} className="rounded-xl border-[--border] shadow-sm card-hover cursor-pointer"
+                          onClick={() => navigate(`/discover/${c.id}`)}>
+                      <CardContent className="p-4">
+                        <div className="font-medium text-[--text-primary]">{c.title}</div>
+                        <div className="text-sm text-[--text-secondary] mt-1">{c.department_name}</div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-              ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Applications performance table */}
+        <TabsContent value="applications">
+          <Card className="rounded-xl border-[--border] shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-[--surface-alt]">
+                  <tr>
+                    <th className="text-left p-4 text-[--text-secondary] font-medium">Challenge</th>
+                    <th className="text-left p-4 text-[--text-secondary] font-medium">Round</th>
+                    <th className="text-left p-4 text-[--text-secondary] font-medium">Score</th>
+                    <th className="text-left p-4 text-[--text-secondary] font-medium">Status</th>
+                    <th className="text-left p-4 text-[--text-secondary] font-medium">Rating Change</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ratingHistory.map(rh => (
+                    <tr key={rh.id} className="border-t border-[--border]">
+                      <td className="p-4 font-medium text-[--text-primary]">{rh.challenge_title || `App #${rh.application}`}</td>
+                      <td className="p-4 text-[--text-secondary]">{rh.round === 'round1_application' ? 'Round 1' : 'Round 2'}</td>
+                      <td className="p-4 text-[--text-primary]">{rh.score}/50</td>
+                      <td className="p-4 text-[--text-secondary]">—</td>
+                      <td className="p-4 text-green-600 font-semibold">+{rh.delta}</td>
+                    </tr>
+                  ))}
+                  {ratingHistory.length === 0 && (
+                    <tr><td colSpan={5} className="p-8 text-center text-[--text-secondary]">No rating history yet.</td></tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </Card>
-        </div>
-      )}
+        </TabsContent>
+
+        {/* Awards & Badges */}
+        <TabsContent value="badges">
+          <div className="space-y-8">
+            {/* Earned badges grid */}
+            <div>
+              <h2 className="text-lg font-semibold text-[--text-primary] mb-4">Your Badges</h2>
+              {badges.length > 0 ? (
+                <div className="flex flex-wrap gap-6">
+                  {badges.map(b => (
+                    <BadgeIcon key={b.badge_key} badgeKey={b.badge_key} size={64} showLabel earnedAt={b.earned_at} />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">No badges earned yet — submit your first application to start.</p>
+              )}
+            </div>
+
+            {/* Tier progression strip — R10 with /2000 + bar */}
+            <div>
+              <h2 className="text-lg font-semibold text-[--text-primary] mb-4">Rating Tiers</h2>
+              <div className="mb-3 flex items-center gap-2">
+                <span className="text-xl font-space-grotesk font-bold text-[--text-primary]">{rating} / 2000</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+                <div className="h-2 rounded-full bg-[--accent]"
+                     style={{ width: `${Math.min(rating, 2000) / 2000 * 100}%` }} />
+              </div>
+              <div className="flex gap-4 overflow-x-auto pb-2">
+                {RATING_TIERS.map(t => {
+                  const isActive = tier.label === t.label;
+                  return (
+                    <div key={t.label}
+                         className={`flex flex-col items-center transition-transform ${isActive ? 'scale-110' : ''}`}
+                         style={isActive ? { filter: 'drop-shadow(0 0 6px rgba(79,70,229,0.4))' } : {}}>
+                      <BadgeIcon
+                        badgeKey={`tier_${t.label}`}
+                        shieldColor={t.shieldColor}
+                        iconName="Star"
+                        size={isActive ? 56 : 44}
+                        showLabel
+                      />
+                      <span className="text-[10px] text-gray-400 mt-0.5">{t.min}+</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Badge elements guide */}
+            <div className="pt-4 border-t border-[--border]">
+              <h3 className="text-sm font-semibold text-[--text-secondary] mb-3">Badge Elements Guide</h3>
+              <div className="flex flex-wrap gap-4">
+                {BADGE_ELEMENTS.map(e => (
+                  <div key={e.label} className="flex items-center gap-2 text-xs text-[--text-secondary]">
+                    <span className="text-base">{e.icon}</span>
+                    <span>{e.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Activity log */}
+        <TabsContent value="activity">
+          <Card className="rounded-xl border-[--border] shadow-sm">
+            <CardContent className="pt-6">
+              {auditLogs.length === 0 ? (
+                <p className="text-sm text-[--text-secondary]">No activity yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {auditLogs.map((log, i) => (
+                    <div key={i} className="flex items-center gap-3 text-sm">
+                      <Activity size={14} className="text-gray-400 shrink-0" />
+                      <span className="text-[--text-secondary] flex-1">{log.action}</span>
+                      <span className="text-xs text-gray-400">{getRelativeTime(log.timestamp)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
