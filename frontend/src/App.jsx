@@ -3,8 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { motion, AnimatePresence } from 'motion/react';
 
 // Layouts
-import StartupSidebar from './components/StartupSidebar';
-import GovernmentSidebar from './components/GovernmentSidebar';
+import AppSidebar from './components/AppSidebar';
 
 // Public pages
 import Landing from './pages/Landing';
