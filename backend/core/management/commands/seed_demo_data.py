@@ -177,11 +177,6 @@ class Command(BaseCommand):
             adopting_departments=[]
         )
 
-        self.stdout.write("Creating Evaluators and Admin...")
-        User.objects.create_user(username='evaluator1', password='demo1234', role='evaluator')
-        User.objects.create_user(username='evaluator2', password='demo1234', role='evaluator')
-        User.objects.create_superuser(username='admin', password='demo1234', role='admin')
-
         self.stdout.write(self.style.SUCCESS('Successfully seeded demo data!'))
         
         self.stdout.write(f"Users: {User.objects.count()}")
