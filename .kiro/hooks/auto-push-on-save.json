@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Auto-push to GitHub on file save",
+      "trigger": "PostFileSave",
+      "description": "Automatically stages, commits, and pushes any .py/.jsx/.js/.css/.html/.json file save to the GitHub repo",
+      "matcher": "\\.(py|jsx|js|css|html|json|txt|md)$",
+      "action": {
+        "type": "command",
+        "command": "cd \"c:\\Users\\Lenovo\\Desktop\\Divye\\NSUT\\SIH\" && git add -A && git diff --cached --quiet || git commit -m \"auto: sync changes\" && git push origin master",
+        "timeout": 30
+      }
+    }
+  ]
+}
