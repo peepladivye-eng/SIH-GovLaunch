@@ -41,7 +41,16 @@ class ApplicationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Application
         fields = '__all__'
-        read_only_fields = ['startup', 'status', 'created_at']
+        read_only_fields = ['startup', 'status', 'created_at', 'content_hash']
+
+    def create(self, validated_data):
+        import hashlib
+        instance = super().create(validated_data)
+        instance.content_hash = hashlib.sha256(
+            instance.solution_brief.encode()
+        ).hexdigest()
+        instance.save(update_fields=['content_hash'])
+        return instance
 
 class EligibilityResultSerializer(serializers.ModelSerializer):
     class Meta:
