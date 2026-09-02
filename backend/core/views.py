@@ -230,6 +230,10 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             action='Submitted application',
             target=f'Challenge #{app.challenge_id}',
         )
+        # R3 — first_application badge
+        from .badges import award_badge
+        if Application.objects.filter(startup=app.startup).count() == 1:
+            award_badge(app.startup, 'first_application')
 
 
 class EligibilityResultViewSet(viewsets.ReadOnlyModelViewSet):
