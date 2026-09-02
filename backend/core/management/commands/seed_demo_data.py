@@ -29,19 +29,26 @@ class Command(BaseCommand):
 
         self.stdout.write("Creating Startups...")
         s_data = [
-            ('MediTriage AI', ['healthtech','AI'], 3, 2024, 'DIPP12345', 'meditriage-ai', 'We use transformer-based NLP models to triage patient symptoms during teleconsultation queues, routing urgent cases to specialists within minutes. Our pilot at two urban clinics reduced average wait-to-diagnosis time by 38%.'),
-            ('AgroSense Labs', ['agritech','IoT'], 5, 2023, 'DIPP12346', 'agrosense-labs', 'We deploy low-cost soil-and-air sensor networks that give smallholder farmers real-time crop health dashboards on basic smartphones. Our sensors cost 70% less than commercial alternatives and have been field-tested across 200 farms in Maharashtra.'),
-            ('SecureGrid Systems', ['defense-tech','cybersecurity'], 8, 2022, 'DIPP12347', 'securegrid-systems', 'We build mesh sensor arrays for perimeter intrusion detection that operate on solar power with encrypted LoRa communication. Our systems have been tested in harsh terrain conditions across three defence research pilot sites.'),
-            ('RuralPay Connect', ['fintech'], 2, 2024, 'DIPP12348', 'ruralpay-connect', 'We enable UPI-based micro-payments for rural service providers who lack traditional banking infrastructure. Our offline-first architecture processes transactions locally and syncs when connectivity returns.'),
-            ('CleanAir Sensors', ['cleantech','IoT'], 4, 2023, 'DIPP12349', 'cleanair-sensors', 'We manufacture PM2.5 and NO2 sensor nodes at one-tenth the cost of reference-grade monitors, calibrated using machine learning. Our network of 500 nodes across Pune provides hyperlocal air quality data to municipal authorities.'),
-            ('DiagnoAI', ['healthtech','AI'], 6, 2021, 'DIPP12350', 'diagnoai', 'We provide AI-powered diagnostic support for chest X-rays and retinal scans, enabling early detection of TB and diabetic retinopathy at primary care level. Our models are validated on Indian patient datasets and integrated with two state health platforms.'),
-            ('DroneWatch Defence', ['defense-tech'], 3, 2024, 'DIPP12351', 'dronewatch-defence', 'We develop autonomous fixed-wing surveillance drones with onboard edge-AI for real-time threat classification. Our drones operate in GPS-denied environments using visual-inertial navigation.'),
-            ('WaterGrid Analytics', ['cleantech'], 2, 2024, 'DIPP12352', 'watergrid-analytics', 'We build portable water quality testing kits with IoT-connected sensors that transmit results to a central dashboard in real time. Our kits test for 12 contaminants and produce lab-comparable results in under 10 minutes.')
+            ('MediTriage AI',        ['healthtech','AI'],          3, 2024, 'DIPP12345', 'meditriage-ai',        'dpiit_recognized', 'We use transformer-based NLP models to triage patient symptoms during teleconsultation queues, routing urgent cases to specialists within minutes. Our pilot at two urban clinics reduced average wait-to-diagnosis time by 38%.'),
+            ('AgroSense Labs',        ['agritech','IoT'],           5, 2023, 'DIPP12346', 'agrosense-labs',        'dpiit_recognized', 'We deploy low-cost soil-and-air sensor networks that give smallholder farmers real-time crop health dashboards on basic smartphones. Our sensors cost 70% less than commercial alternatives and have been field-tested across 200 farms in Maharashtra.'),
+            ('SecureGrid Systems',    ['defense-tech','cybersecurity'], 8, 2022, 'DIPP12347', 'securegrid-systems', 'dpiit_recognized', 'We build mesh sensor arrays for perimeter intrusion detection that operate on solar power with encrypted LoRa communication. Our systems have been tested in harsh terrain conditions across three defence research pilot sites.'),
+            ('RuralPay Connect',      ['fintech'],                  2, 2024, 'DIPP12348', 'ruralpay-connect',      'dpiit_recognized', 'We enable UPI-based micro-payments for rural service providers who lack traditional banking infrastructure. Our offline-first architecture processes transactions locally and syncs when connectivity returns.'),
+            ('CleanAir Sensors',      ['cleantech','IoT'],          4, 2023, 'DIPP12349', 'cleanair-sensors',      'dpiit_recognized', 'We manufacture PM2.5 and NO2 sensor nodes at one-tenth the cost of reference-grade monitors, calibrated using machine learning. Our network of 500 nodes across Pune provides hyperlocal air quality data to municipal authorities.'),
+            ('DiagnoAI',              ['healthtech','AI'],          6, 2021, 'DIPP12350', 'diagnoai',              'dpiit_recognized', 'We provide AI-powered diagnostic support for chest X-rays and retinal scans, enabling early detection of TB and diabetic retinopathy at primary care level. Our models are validated on Indian patient datasets and integrated with two state health platforms.'),
+            ('DroneWatch Defence',    ['defense-tech'],             3, 2024, 'DIPP12351', 'dronewatch-defence',    'dpiit_recognized', 'We develop autonomous fixed-wing surveillance drones with onboard edge-AI for real-time threat classification. Our drones operate in GPS-denied environments using visual-inertial navigation.'),
+            ('WaterGrid Analytics',   ['cleantech'],                2, 2024, 'DIPP12352', 'watergrid-analytics',   'dpiit_recognized', 'We build portable water quality testing kits with IoT-connected sensors that transmit results to a central dashboard in real time. Our kits test for 12 contaminants and produce lab-comparable results in under 10 minutes.'),
+            # Innovator Track — pre-DPIIT startups
+            ('GreenBridge Robotics',  ['cleantech'],                2, 2025, '',          'greenbridge-robotics',  'unregistered',     'Two-person team prototyping low-cost robotic weeding for smallholder farms; pre-incorporation.'),
+            ('NeuroPath Diagnostics', ['healthtech','AI'],          3, 2025, '',          'neuropath-diagnostics', 'incorporated',     'Incorporated 6 weeks ago, DPIIT application filed and pending review.'),
         ]
         startups = {}
-        for name, tags, team, year, dpiit, username, pitch in s_data:
+        for name, tags, team, year, dpiit, username, reg_status, pitch in s_data:
             u = User.objects.create_user(username=username, password='demo1234', role='startup')
-            s = Startup.objects.create(user=u, name=name, sector_tags=tags, team_size=team, founded_year=year, dpiit_id=dpiit, pitch_summary=pitch)
+            s = Startup.objects.create(
+                user=u, name=name, sector_tags=tags, team_size=team,
+                founded_year=year, dpiit_id=dpiit, pitch_summary=pitch,
+                registration_status=reg_status,
+            )
             startups[name] = s
 
         self.stdout.write("Creating Challenges...")
