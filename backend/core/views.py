@@ -289,7 +289,6 @@ class ContractViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         contract = serializer.save()
-        # Mark application as contracted
         app = contract.application
         app.status = 'contracted'
         app.save()
@@ -298,6 +297,9 @@ class ContractViewSet(viewsets.ModelViewSet):
             action='Generated contract',
             target=f'Application #{app.id}',
         )
+        # R3 — contract_winner badge
+        from .badges import award_badge
+        award_badge(app.startup, 'contract_winner')
         # Try PDF generation (requires WeasyPrint)
         try:
             self._generate_pdf(contract)
