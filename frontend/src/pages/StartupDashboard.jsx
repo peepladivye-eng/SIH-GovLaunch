@@ -1,14 +1,108 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, useSpring, useInView, AnimatePresence } from 'motion/react';
 import { FileText, Star, CheckCircle, Clock, Activity } from 'lucide-react';
 import { api } from '../lib/api';
-import StatCard from '../components/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import TierBadge from '../components/TierBadge';
 import BadgeIcon, { RatingTierBadge } from '../components/BadgeIcon';
 import { getRatingTier, RATING_TIERS } from '../lib/ratingTiers';
 import { BADGE_CATALOG } from '../lib/badgeCatalog';
+import { NumberTicker } from '../components/NumberTicker';
+
+// ── 3D Tilt stat card ─────────────────────────────────────────────────────────
+function Stat3DCard({ icon: Icon, value, label, color, accentColor, index }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true });
+  const rotateX = useSpring(0, { stiffness: 200, damping: 20 });
+  const rotateY = useSpring(0, { stiffness: 200, damping: 20 });
+
+  const onMove = useCallback((e) => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) return;
+    const px = (e.clientX - rect.left) / rect.width;
+    const py = (e.clientY - rect.top) / rect.height;
+    rotateX.set((py - 0.5) * -16);
+    rotateY.set((px - 0.5) * 16);
+  }, [rotateX, rotateY]);
+
+  const onLeave = useCallback(() => { rotateX.set(0); rotateY.set(0); }, [rotateX, rotateY]);
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 40, scale: 0.9 }}
+      animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
+      transition={{ duration: 0.55, delay: index * 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
+      onMouseMove={onMove}
+      onMouseLeave={onLeave}
+      style={{
+        rotateX, rotateY,
+        transformStyle: 'preserve-3d', perspective: 1000,
+        borderRadius: 16, padding: '22px 20px',
+        background: '#ffffff',
+        border: `1px solid ${accentColor}22`,
+        boxShadow: `0 4px 24px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)`,
+        position: 'relative', overflow: 'hidden', cursor: 'default',
+      }}
+      whileHover={{ boxShadow: `0 8px 40px ${accentColor}25, 0 2px 8px rgba(0,0,0,0.06)` }}
+    >
+      {/* Background gradient shine */}
+      <div style={{
+        position: 'absolute', top: 0, right: 0,
+        width: 80, height: 80, borderRadius: '50%',
+        background: `radial-gradient(circle, ${accentColor}15 0%, transparent 70%)`,
+        transform: 'translate(20px,-20px)',
+        pointerEvents: 'none',
+      }} />
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 12,
+          background: `${accentColor}18`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Icon size={22} color={accentColor} />
+        </div>
+      </div>
+
+      <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 38, fontWeight: 800, color: '#0B0F19', lineHeight: 1, marginBottom: 6 }}>
+        <NumberTicker value={value ?? 0} className="" />
+      </div>
+      <div style={{ fontSize: 13, color: '#64748B', fontWeight: 500 }}>{label}</div>
+
+      {/* Bottom accent line */}
+      <motion.div
+        initial={{ scaleX: 0 }}
+        animate={inView ? { scaleX: 1 } : {}}
+        transition={{ duration: 0.6, delay: 0.3 + index * 0.1 }}
+        style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, height: 3,
+          background: `linear-gradient(90deg, ${accentColor}, ${accentColor}44)`,
+          transformOrigin: 'left', borderRadius: '0 0 16px 16px',
+        }}
+      />
+    </motion.div>
+  );
+}
+
+// Scroll reveal
+function Reveal({ children, delay = 0, direction = 'up' }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-60px' });
+  const dirs = {
+    up:    { hidden: { opacity: 0, y: 40 },   visible: { opacity: 1, y: 0 } },
+    left:  { hidden: { opacity: 0, x: -40 },  visible: { opacity: 1, x: 0 } },
+    scale: { hidden: { opacity: 0, scale: 0.9 }, visible: { opacity: 1, scale: 1 } },
+  };
+  return (
+    <motion.div ref={ref} initial="hidden" animate={inView ? 'visible' : 'hidden'}
+      variants={dirs[direction]} transition={{ duration: 0.6, delay, ease: [0.25, 0.46, 0.45, 0.94] }}>
+      {children}
+    </motion.div>
+  );
+}
 
 // Simple SVG sparkline for last 5 rating deltas
 function Sparkline({ deltas }) {
