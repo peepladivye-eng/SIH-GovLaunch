@@ -256,16 +256,20 @@ export default function StartupDashboard() {
             {/* Recommended challenges */}
             {challenges.length > 0 && (
               <div>
-                <h2 className="text-lg font-semibold text-[--text-primary] mb-3">Open Challenges</h2>
+                <Reveal direction="up" delay={0.1}>
+                  <h2 className="text-lg font-semibold text-[--text-primary] mb-3">Open Challenges</h2>
+                </Reveal>
                 <div className="grid grid-cols-2 gap-4">
-                  {challenges.slice(0, 4).map(c => (
-                    <Card key={c.id} className="rounded-xl border-[--border] shadow-sm card-hover cursor-pointer"
-                          onClick={() => navigate(`/discover/${c.id}`)}>
-                      <CardContent className="p-4">
-                        <div className="font-medium text-[--text-primary]">{c.title}</div>
-                        <div className="text-sm text-[--text-secondary] mt-1">{c.department_name}</div>
-                      </CardContent>
-                    </Card>
+                  {challenges.slice(0, 4).map((c, i) => (
+                    <Reveal key={c.id} direction="up" delay={0.15 + i * 0.08}>
+                      <Card key={c.id} className="rounded-xl border-[--border] shadow-sm card-hover cursor-pointer"
+                            onClick={() => navigate(`/discover/${c.id}`)}>
+                        <CardContent className="p-4">
+                          <div className="font-medium text-[--text-primary]">{c.title}</div>
+                          <div className="text-sm text-[--text-secondary] mt-1">{c.department_name}</div>
+                        </CardContent>
+                      </Card>
+                    </Reveal>
                   ))}
                 </div>
               </div>
