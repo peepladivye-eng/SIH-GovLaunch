@@ -273,6 +273,15 @@ class EvaluationViewSet(viewsets.ModelViewSet):
             action='Submitted evaluation',
             target=f'Application #{serializer.instance.application_id}',
         )
+        # R3 — prototype_builder badge when first round2 eval is created
+        from .badges import award_badge
+        ev = serializer.instance
+        if ev.round == 'round2_prototype':
+            is_first_r2 = Evaluation.objects.filter(
+                application=ev.application, round='round2_prototype'
+            ).count() == 1
+            if is_first_r2:
+                award_badge(ev.application.startup, 'prototype_builder')
 
 
 class ContractViewSet(viewsets.ModelViewSet):
