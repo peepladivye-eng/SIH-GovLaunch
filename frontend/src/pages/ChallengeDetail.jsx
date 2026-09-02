@@ -298,6 +298,21 @@ export default function ChallengeDetail() {
                                   <TierBadge registrationStatus={app.startup_registration_status} />
                                 </div>
                               )}
+                              {/* R8 — rating tier pill on every kanban card */}
+                              {app.startup_rating != null && (
+                                <div className="mt-1.5">
+                                  <RatingTierBadge rating={app.startup_rating} size={28} />
+                                </div>
+                              )}
+                              {/* R7 — compact prototype countdown */}
+                              {app.prototype_deadline && (
+                                <div className="mt-1.5 flex items-center gap-1 text-xs text-amber-600">
+                                  <Clock size={12} />
+                                  {Math.max(0, Math.ceil(
+                                    (new Date(app.prototype_deadline) - new Date()) / 86400000
+                                  ))}d left
+                                </div>
+                              )}
                             </div>
                             
                             {/* Sector tags */}
