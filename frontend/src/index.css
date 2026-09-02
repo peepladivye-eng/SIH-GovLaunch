@@ -1,0 +1,175 @@
+@import 'tailwindcss';
+
+:root {
+  /* GovLaunch Color Tokens */
+  --bg: #0B0F19;
+  --surface: #FFFFFF;
+  --surface-alt: #F4F6FB;
+  --border: #E3E7F0;
+  --text-primary: #0B0F19;
+  --text-secondary: #5B6478;
+  
+  /* Primary Accent - Indigo */
+  --accent: #4F46E5;
+  --accent-glow: #818CF8;
+  --accent-dark: #3730A3;
+  
+  /* Government Accent - Teal */
+  --gov-accent: #0F766E;
+  --gov-accent-light: #14B8A6;
+  
+  /* Status Colors */
+  --success: #10B981;
+  --success-bg: #ECFDF5;
+  --warning: #F59E0B;
+  --warning-bg: #FFFBEB;
+  --danger: #EF4444;
+  --danger-bg: #FEF2F2;
+  
+  /* Sector Colors */
+  --sector-healthtech: #4F46E5;
+  --sector-defense: #475569;
+  --sector-agritech: #10B981;
+  --sector-fintech: #F59E0B;
+  --sector-cleantech: #0F766E;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  color: var(--text-primary);
+  background-color: var(--surface-alt);
+  margin: 0;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Font utilities */
+.font-space-grotesk {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Page transitions */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: fadeSlideIn 200ms ease-out forwards;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-alt);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Sidebar active indicator animation */
+.sidebar-indicator {
+  transition: all 150ms ease;
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: box-shadow 150ms ease, transform 150ms ease;
+}
+
+.card-hover:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Button transitions */
+.btn-transition {
+  transition: all 150ms ease;
+}
+
+/* Badge dot */
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+}
+
+/* Sector color mappings */
+.sector-healthtech { color: var(--sector-healthtech); }
+.sector-defense { color: var(--sector-defense); }
+.sector-agritech { color: var(--sector-agritech); }
+.sector-fintech { color: var(--sector-fintech); }
+.sector-cleantech { color: var(--sector-cleantech); }
+
+.bg-sector-healthtech { background-color: var(--sector-healthtech); }
+.bg-sector-defense { background-color: var(--sector-defense); }
+.bg-sector-agritech { background-color: var(--sector-agritech); }
+.bg-sector-fintech { background-color: var(--sector-fintech); }
+.bg-sector-cleantech { background-color: var(--sector-cleantech); }
+
+/* Status pills */
+.status-submitted { background-color: #FEF3C7; color: #92400E; }
+.status-screening { background-color: #DBEAFE; color: #1E40AF; }
+.status-eligible { background-color: #D1FAE5; color: #065F46; }
+.status-under_evaluation { background-color: #E0E7FF; color: #3730A3; }
+.status-shortlisted { background-color: #D1FAE5; color: #065F46; }
+.status-contracted { background-color: #10B981; color: white; }
+.status-rejected { background-color: #FEE2E2; color: #991B1B; }
+.status-ineligible { background-color: #F3F4F6; color: #6B7280; }
+
+/* Redaction blur */
+.redaction-blur {
+  filter: blur(4px);
+  user-select: none;
+  pointer-events: none;
+}
+
+.redaction-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.7);
+}
+
+/* Tier badge colors */
+.tier-unregistered { color: #D97706; }
+.tier-incorporated { color: #D97706; }
+.tier-dpiit_recognized { color: #059669; }
+
+/* ── ShimmerButton keyframes (Magic UI) ─────────────────────────── */
+@keyframes shimmer-slide {
+  to { transform: translate(calc(100cqw - 100%), 0); }
+}
+
+@keyframes spin-around {
+  0%   { transform: translateZ(0) rotate(0);   }
+  15%, 35% { transform: translateZ(0) rotate(90deg);  }
+  65%, 85% { transform: translateZ(0) rotate(270deg); }
+  100% { transform: translateZ(0) rotate(360deg); }
+}

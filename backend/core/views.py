@@ -1,0 +1,575 @@
+import os
+from django.contrib.auth import authenticate, login, logout
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework.authentication import SessionAuthentication
+from .models import *
+from .serializers import *
+from .permissions import *
+from .eligibility import run_eligibility_check
+
+
+# ── Auth helpers ──────────────────────────────────────────────────────────────
+
+class CsrfExemptSessionAuthentication(SessionAuthentication):
+    """Skip CSRF enforcement at the DRF layer — handled by the cookie instead."""
+    def enforce_csrf(self, request):
+        return
+
+
+# ── Auth views ────────────────────────────────────────────────────────────────
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def login_view(request):
+    username = request.data.get('username')
+    password = request.data.get('password')
+    user = authenticate(request, username=username, password=password)
+    if user is not None:
+        login(request, user)
+        return Response({'role': user.role, 'user_id': user.id})
+    return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def logout_view(request):
+    logout(request)
+    return Response({'success': True})
+
+
+@api_view(['GET'])
+def me_view(request):
+    user = request.user
+    data = {'role': user.role, 'user_id': user.id, 'username': user.username}
+    if user.role == 'department' and hasattr(user, 'department'):
+        data['name'] = user.department.name
+        data['department_id'] = user.department.id
+        data['ministry'] = user.department.ministry
+    elif user.role == 'startup' and hasattr(user, 'startup'):
+        s = user.startup
+        data['name'] = s.name
+        data['startup_id'] = s.id
+        data['sector_tags'] = s.sector_tags
+        data['registration_status'] = s.registration_status
+    else:
+        data['name'] = user.username
+    return Response(data)
+
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def signup_view(request):
+    """Register a new startup or department user."""
+    username = request.data.get('username', '').strip()
+    password = request.data.get('password', '')
+    role     = request.data.get('role', '')
+    name     = request.data.get('name', username)
+
+    if not username or not password or not role:
+        return Response({'detail': 'username, password and role are required.'},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if User.objects.filter(username=username).exists():
+        return Response({'detail': 'Username already taken.'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    user = User.objects.create_user(username=username, password=password, role=role)
+
+    if role == 'startup':
+        Startup.objects.create(
+            user=user,
+            name=name,
+            sector_tags=request.data.get('sector_tags', []),
+            team_size=max(1, int(request.data.get('team_size', 1) or 1)),
+            pitch_summary=request.data.get('pitch_summary', ''),
+            founded_year=int(request.data.get('founded_year', 2024) or 2024),
+            registration_status=request.data.get('registration_status', 'unregistered'),
+        )
+    elif role == 'department':
+        Department.objects.create(
+            user=user,
+            name=name,
+            ministry=request.data.get('ministry', ''),
+        )
+
+    return Response({'detail': 'Account created. Please log in.'},
+                    status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def log_application_view(request, pk):
+    """Create an audit log entry when dept/evaluator opens an application."""
+    if not Application.objects.filter(pk=pk).exists():
+        return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+    AuditLog.objects.create(
+        actor=request.user.username,
+        action='Viewed solution brief',
+        target=f'Application #{pk}',
+    )
+    return Response({'detail': 'Logged.'})
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def health_view(request):
+    return Response({"status": "ok"})
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def public_stats_view(request):
+    return Response({
+        'open_challenges': Challenge.objects.filter(status='open').count(),
+        'startups':        User.objects.filter(role='startup').count(),
+        'pilots_scaled':   ScaleUpEntry.objects.count(),
+    })
+
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def reset_demo_view(request):
+    if request.user.role != 'admin':
+        return Response({'error': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+    from django.core.management import call_command
+    call_command('seed_demo_data')
+    return Response({'success': True})
+
+
+# ── ViewSets ──────────────────────────────────────────────────────────────────
+
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    authentication_classes = (CsrfExemptSessionAuthentication,)
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class DepartmentViewSet(viewsets.ModelViewSet):
+    queryset = Department.objects.all()
+    serializer_class = DepartmentSerializer
+    authentication_classes = (CsrfExemptSessionAuthentication,)
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class StartupViewSet(viewsets.ModelViewSet):
+    queryset = Startup.objects.all()
+    serializer_class = StartupSerializer
+    authentication_classes = (CsrfExemptSessionAuthentication,)
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class ChallengeViewSet(viewsets.ModelViewSet):
+    queryset = Challenge.objects.all()
+    serializer_class = ChallengeSerializer
+    authentication_classes = (CsrfExemptSessionAuthentication,)
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'department' and hasattr(user, 'department'):
+            return Challenge.objects.filter(department=user.department)
+        if user.role == 'startup':
+            return Challenge.objects.filter(status='open')
+        # evaluator, admin, department without profile
+        return Challenge.objects.all()
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsDepartment()]
+        return [permissions.IsAuthenticated()]
+
+    def perform_create(self, serializer):
+        serializer.save(department=self.request.user.department)
+        AuditLog.objects.create(
+            actor=self.request.user.username,
+            action='Posted challenge',
+            target=serializer.instance.title,
+        )
+
+
+class ApplicationViewSet(viewsets.ModelViewSet):
+    queryset = Application.objects.all()
+    serializer_class = ApplicationSerializer
+    authentication_classes = (CsrfExemptSessionAuthentication,)
+
+    def get_queryset(self):
+        user = self.request.user
+        challenge_id = self.request.query_params.get('challenge')
+        qs = Application.objects.all()
+
+        # Scope by role first
+        if user.role == 'startup' and hasattr(user, 'startup'):
+            qs = qs.filter(startup=user.startup)
+        elif user.role == 'department' and hasattr(user, 'department'):
+            qs = qs.filter(challenge__department=user.department)
+        elif user.role == 'evaluator':
+            qs = qs.filter(status='under_evaluation')
+        # admin sees all
+
+        # Additional filter by challenge id if requested
+        if challenge_id:
+            qs = qs.filter(challenge_id=challenge_id)
+
+        return qs
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.role == 'startup' and hasattr(user, 'startup'):
+            app = serializer.save(startup=user.startup)
+        else:
+            app = serializer.save()
+        run_eligibility_check(app)
+        AuditLog.objects.create(
+            actor=user.username,
+            action='Submitted application',
+            target=f'Challenge #{app.challenge_id}',
+        )
+
+
+class EligibilityResultViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = EligibilityResult.objects.all()
+    serializer_class = EligibilityResultSerializer
+    authentication_classes = (CsrfExemptSessionAuthentication,)
+
+    def get_queryset(self):
+        qs = EligibilityResult.objects.all()
+        app_id = self.request.query_params.get('application')
+        if app_id:
+            qs = qs.filter(application_id=app_id)
+        return qs
+
+
+class EvaluationViewSet(viewsets.ModelViewSet):
+    queryset = Evaluation.objects.all()
+    serializer_class = EvaluationSerializer
+    authentication_classes = (CsrfExemptSessionAuthentication,)
+
+    def get_queryset(self):
+        qs = Evaluation.objects.all()
+        app_id = self.request.query_params.get('application')
+        if app_id:
+            qs = qs.filter(application_id=app_id)
+        return qs
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [IsEvaluator()]
+        return [permissions.IsAuthenticated()]
+
+    def perform_create(self, serializer):
+        serializer.save(evaluator=self.request.user)
+        AuditLog.objects.create(
+            actor=self.request.user.username,
+            action='Submitted evaluation',
+            target=f'Application #{serializer.instance.application_id}',
+        )
+
+
+class ContractViewSet(viewsets.ModelViewSet):
+    queryset = Contract.objects.all()
+    serializer_class = ContractSerializer
+    authentication_classes = (CsrfExemptSessionAuthentication,)
+
+    def get_queryset(self):
+        qs = Contract.objects.all()
+        app_id = self.request.query_params.get('application')
+        if app_id:
+            qs = qs.filter(application_id=app_id)
+        return qs
+
+    def perform_create(self, serializer):
+        contract = serializer.save()
+        # Mark application as contracted
+        app = contract.application
+        app.status = 'contracted'
+        app.save()
+        AuditLog.objects.create(
+            actor=self.request.user.username,
+            action='Generated contract',
+            target=f'Application #{app.id}',
+        )
+        # Try PDF generation (requires WeasyPrint)
+        try:
+            self._generate_pdf(contract)
+        except Exception as e:
+            print(f"PDF generation skipped: {e}")
+
+    def _generate_pdf(self, contract):
+        from jinja2 import Environment, FileSystemLoader
+        from django.conf import settings
+        from weasyprint import HTML
+
+        app = contract.application
+        template_dir = os.path.join(settings.BASE_DIR, 'core', 'templates')
+        env = Environment(loader=FileSystemLoader(template_dir))
+        template = env.get_template('contract.html')
+        html = template.render(
+            department_name=app.challenge.department.name,
+            startup_name=app.startup.name,
+            challenge_title=app.challenge.title,
+            ip_clause_text=contract.ip_clause_text,
+            data_clause_text=contract.data_clause_text,
+            cybersecurity_checklist_text=contract.cybersecurity_checklist_text,
+            milestones=contract.milestones,
+        )
+        media_dir = os.path.join(settings.MEDIA_ROOT, 'contracts')
+        os.makedirs(media_dir, exist_ok=True)
+        pdf_path = os.path.join(media_dir, f'contract_{contract.id}.pdf')
+        HTML(string=html).write_pdf(pdf_path)
+        contract.pdf_file = f'contracts/contract_{contract.id}.pdf'
+        contract.save()
+
+
+class ScaleUpEntryViewSet(viewsets.ModelViewSet):
+    queryset = ScaleUpEntry.objects.all()
+    serializer_class = ScaleUpEntrySerializer
+    authentication_classes = (CsrfExemptSessionAuthentication,)
+
+
+class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = AuditLog.objects.all()
+    serializer_class = AuditLogSerializer
+    authentication_classes = (CsrfExemptSessionAuthentication,)
+    permission_classes = [permissions.IsAuthenticated]
+
+
+# ── Supervision Layer ─────────────────────────────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def supervision_duplicates(request):
+    """
+    GET /api/supervision/duplicates/?department=<id>
+    Compute pairwise TF-IDF cosine similarity across all solution_briefs for
+    challenges owned by the requesting department. Returns pairs >= 0.75.
+    No DB write — always computed fresh.
+    """
+    user = request.user
+    if user.role != 'department' or not hasattr(user, 'department'):
+        return Response({'error': 'Department access only.'}, status=status.HTTP_403_FORBIDDEN)
+
+    dept = user.department
+    apps = Application.objects.filter(
+        challenge__department=dept
+    ).select_related('startup', 'challenge')
+
+    if apps.count() < 2:
+        return Response([])
+
+    app_list = list(apps)
+    briefs   = [a.solution_brief for a in app_list]
+
+    try:
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.metrics.pairwise import cosine_similarity
+        import numpy as np
+
+        vec    = TfidfVectorizer(stop_words='english', min_df=1)
+        matrix = vec.fit_transform(briefs)
+        sims   = cosine_similarity(matrix)
+    except ImportError:
+        return Response(
+            {'error': 'scikit-learn not installed. Run: pip install scikit-learn'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+    results = []
+    n = len(app_list)
+    for i in range(n):
+        for j in range(i + 1, n):
+            score = float(sims[i, j])
+            if score >= 0.75:
+                a = app_list[i]
+                b = app_list[j]
+                earlier = 'application_a' if a.created_at <= b.created_at else 'application_b'
+                results.append({
+                    'application_a': {
+                        'id': a.id,
+                        'startup_name': a.startup.name,
+                        'submitted_at': a.created_at.isoformat(),
+                    },
+                    'application_b': {
+                        'id': b.id,
+                        'startup_name': b.startup.name,
+                        'submitted_at': b.created_at.isoformat(),
+                    },
+                    'similarity': round(score, 4),
+                    'earlier': earlier,
+                })
+
+    return Response(results)
+
+
+@api_view(['GET', 'PUT'])
+@permission_classes([permissions.IsAuthenticated])
+def ai_provider_config(request):
+    """
+    GET /api/ai-provider-config/  — return masked config for this dept
+    PUT /api/ai-provider-config/  — save/update provider + api_key + enabled
+    """
+    user = request.user
+    if user.role != 'department' or not hasattr(user, 'department'):
+        return Response({'error': 'Department access only.'}, status=status.HTTP_403_FORBIDDEN)
+
+    dept = user.department
+
+    if request.method == 'GET':
+        try:
+            cfg = AIProviderConfig.objects.get(department=dept)
+            return Response(AIProviderConfigSerializer(cfg).data)
+        except AIProviderConfig.DoesNotExist:
+            return Response(None)
+
+    # PUT
+    provider = request.data.get('provider')
+    api_key  = request.data.get('api_key', '')
+    enabled  = request.data.get('enabled', True)
+
+    if not provider:
+        return Response({'detail': 'provider is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    cfg, _ = AIProviderConfig.objects.get_or_create(department=dept)
+    cfg.provider = provider
+    cfg.enabled  = bool(enabled)
+    if api_key:          # only update key if a new one was explicitly sent
+        cfg.api_key = api_key
+    cfg.save()
+
+    AuditLog.objects.create(
+        actor=user.username,
+        action='Updated AI provider config',
+        target=f'Department #{dept.id}',
+    )
+    return Response(AIProviderConfigSerializer(cfg).data)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def novelty_check(request, pk):
+    """
+    POST /api/applications/<id>/novelty-check/
+    Calls the department's configured AI provider with the solution brief
+    and persists a NoveltyCheck result.
+    """
+    import json, requests as http
+
+    try:
+        app = Application.objects.select_related(
+            'startup', 'challenge__department'
+        ).get(pk=pk)
+    except Application.DoesNotExist:
+        return Response({'error': 'Application not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    dept = app.challenge.department
+    try:
+        cfg = AIProviderConfig.objects.get(department=dept, enabled=True)
+    except AIProviderConfig.DoesNotExist:
+        return Response(
+            {'error': 'No AI provider configured. Add one in Supervision settings.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    prompt = (
+        "You are assisting a government innovation-procurement reviewer. "
+        "Given this startup solution brief, assess: "
+        "(1) Does this already exist as a known commercial product, open-source tool, or published approach? "
+        "(2) If yes, name up to 3 examples. "
+        "(3) Give a verdict: 'Likely Novel', 'Similar Solutions Exist', or 'Partially Novel'. "
+        f"Solution brief: {app.solution_brief}\n"
+        "Respond in strict JSON only, no other text: "
+        '{"verdict": "...", "similar_products": [...], "explanation": "..."}'
+    )
+
+    raw = None
+    try:
+        if cfg.provider == 'openai':
+            resp = http.post(
+                'https://api.openai.com/v1/chat/completions',
+                headers={'Authorization': f'Bearer {cfg.api_key}',
+                         'Content-Type': 'application/json'},
+                json={'model': 'gpt-4o-mini',
+                      'messages': [{'role': 'user', 'content': prompt}],
+                      'response_format': {'type': 'json_object'}},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            raw = resp.json()['choices'][0]['message']['content']
+
+        elif cfg.provider == 'anthropic':
+            resp = http.post(
+                'https://api.anthropic.com/v1/messages',
+                headers={'x-api-key': cfg.api_key,
+                         'anthropic-version': '2023-06-01',
+                         'Content-Type': 'application/json'},
+                json={'model': 'claude-3-5-haiku-20241022',
+                      'max_tokens': 512,
+                      'messages': [{'role': 'user', 'content': prompt}]},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            raw = resp.json()['content'][0]['text']
+
+        elif cfg.provider == 'gemini':
+            resp = http.post(
+                f'https://generativelanguage.googleapis.com/v1beta/models/'
+                f'gemini-1.5-flash:generateContent?key={cfg.api_key}',
+                headers={'Content-Type': 'application/json'},
+                json={'contents': [{'parts': [{'text': prompt}]}]},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            raw = resp.json()['candidates'][0]['content']['parts'][0]['text']
+
+        else:
+            return Response({'error': f'Unknown provider: {cfg.provider}'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        return Response(
+            {'error': 'AI provider request failed. Check your API key in Supervision settings.'},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
+
+    # Parse AI response
+    try:
+        # Strip markdown fences if present
+        clean = raw.strip().lstrip('`').rstrip('`')
+        if clean.startswith('json'):
+            clean = clean[4:]
+        parsed = json.loads(clean)
+    except Exception:
+        return Response(
+            {'error': 'AI returned unparseable response. Try again.'},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
+
+    # Map verdict to 2-state system
+    verdict_map = {
+        'likely novel':          'likely_novel',
+        'similar solutions exist': 'similar_exists',
+        'partially novel':       'similar_exists',
+    }
+    raw_verdict = parsed.get('verdict', '').lower()
+    verdict = verdict_map.get(raw_verdict, 'not_assessed')
+
+    nc, _ = NoveltyCheck.objects.update_or_create(
+        application=app,
+        defaults={
+            'verdict':          verdict,
+            'similar_products': parsed.get('similar_products', []),
+            'explanation':      parsed.get('explanation', ''),
+        }
+    )
+
+    AuditLog.objects.create(
+        actor=request.user.username,
+        action='Ran novelty check',
+        target=f'Application #{pk}',
+    )
+    return Response(NoveltyCheckSerializer(nc).data)
