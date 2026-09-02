@@ -68,24 +68,36 @@ export default function ApplicationDetail() {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
   };
 
-  const handleRunNoveltyCheck = async () => {    setNoveltyLoading(true);
+  const handleRunNoveltyCheck = async () => {
+    setNoveltyLoading(true);
     setNoveltyError('');
     try {
       const result = await api.runNoveltyCheck(id);
       setNoveltyCheck(result);
     } catch (err) {
-      // Parse the error message returned from the backend
       let msg = 'Something went wrong. Please try again.';
-      try {
-        const parsed = JSON.parse(err.message);
-        msg = parsed.error || parsed.detail || msg;
-      } catch (_) {
-        msg = err.message || msg;
-      }
+      try { const p = JSON.parse(err.message); msg = p.error || p.detail || msg; } catch (_) { msg = err.message || msg; }
       setNoveltyError(msg);
     } finally {
       setNoveltyLoading(false);
     }
+  };
+
+  const handleStartPrototype = async () => {
+    setProtoStarting(true);
+    try {
+      const updated = await api.startPrototypePhase(id);
+      setApplication(updated);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setProtoStarting(false);
+    }
+  };
+
+  const getDaysRemaining = (deadline) => {
+    if (!deadline) return null;
+    return Math.ceil((new Date(deadline) - new Date()) / 86400000);
   };
 
   // Determine if solution should be redacted
