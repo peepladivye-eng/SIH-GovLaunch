@@ -68,8 +68,7 @@ export default function ApplicationDetail() {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
   };
 
-  const handleRunNoveltyCheck = async () => {
-    setNoveltyLoading(true);
+  const handleRunNoveltyCheck = async () => {    setNoveltyLoading(true);
     setNoveltyError('');
     try {
       const result = await api.runNoveltyCheck(id);
