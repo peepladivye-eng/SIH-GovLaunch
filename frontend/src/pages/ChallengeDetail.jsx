@@ -84,6 +84,19 @@ export default function ChallengeDetail() {
   if (loading) return <div className="p-6">Loading...</div>;
   if (!challenge) return <div className="p-6">Challenge not found.</div>;
 
+  const handleFinalizeRound = async () => {
+    setFinalizing(true);
+    try {
+      const result = await api.finalizeRound(id, finalizeRound);
+      setFinalizeResult(result);
+      toast({ title: `Ratings updated for ${result.results.length} startups.` });
+    } catch (err) {
+      toast({ title: 'Failed to finalize round', description: err.message, variant: 'destructive' });
+    } finally {
+      setFinalizing(false);
+    }
+  };
+
   const formatCurrency = (amount) => {
     if (!amount) return 'N/A';
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
