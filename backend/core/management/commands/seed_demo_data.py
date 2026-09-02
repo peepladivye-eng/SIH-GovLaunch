@@ -143,7 +143,6 @@ class Command(BaseCommand):
             EligibilityResult.objects.create(application=app, rule_name='requires_no_blacklist', passed=True, reason='No blacklist record found.')
 
         # Evaluation for GreenBridge Robotics application
-        ev1 = User.objects.get(username='evaluator1')
         greenbridge_app = apps[-1]  # last created = GreenBridge
         Evaluation.objects.create(
             application=greenbridge_app,
