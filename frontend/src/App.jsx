@@ -53,18 +53,9 @@ const PageWrapper = ({ children }) => (
 );
 
 // ── Layout shells ─────────────────────────────────────────────────────────────
-const StartupLayout = ({ children }) => (
+const AppLayout = ({ children }) => (
   <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#F4F6FB' }}>
-    <StartupSidebar />
-    <main style={{ flex: 1, marginLeft: 260, padding: 32, minWidth: 0 }}>
-      <PageWrapper>{children}</PageWrapper>
-    </main>
-  </div>
-);
-
-const GovernmentLayout = ({ children }) => (
-  <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#F4F6FB' }}>
-    <GovernmentSidebar />
+    <AppSidebar />
     <main style={{ flex: 1, marginLeft: 260, padding: 32, minWidth: 0 }}>
       <PageWrapper>{children}</PageWrapper>
     </main>
