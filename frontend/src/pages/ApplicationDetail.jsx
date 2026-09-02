@@ -257,14 +257,44 @@ export default function ApplicationDetail() {
             </Card>
           )}
 
-          {/* Only show Generate Contract button for department and if status is shortlisted */}
+          {/* R7 — Generate Contract */}
           {user.role === 'department' && application.status === 'shortlisted' && (
-            <Button 
-              onClick={() => navigate(`/applications/${id}/contract`)}
-              className="bg-[--gov-accent] hover:bg-[--gov-accent-light] text-white"
-            >
-              Generate Contract
-            </Button>
+            <div className="space-y-3">
+              {/* Prototype phase button / countdown */}
+              {!application.prototype_start_date ? (
+                <Button
+                  onClick={handleStartPrototype}
+                  disabled={protoStarting}
+                  variant="outline"
+                  className="border-[--gov-accent] text-[--gov-accent] hover:bg-[--gov-accent]/10"
+                >
+                  <Clock size={16} className="mr-2" />
+                  {protoStarting ? 'Starting…' : 'Start Prototype Phase (30 Days)'}
+                </Button>
+              ) : (
+                <Card className="rounded-xl border-[--border] shadow-sm">
+                  <CardContent className="pt-4">
+                    <div className="font-semibold text-[--text-primary] mb-1">Prototype Deadline</div>
+                    {(() => {
+                      const days = getDaysRemaining(application.prototype_deadline);
+                      return days !== null && days > 0 ? (
+                        <div className={`text-2xl font-bold ${days <= 7 ? 'text-amber-600' : 'text-[--text-primary]'}`}>
+                          {days} days remaining
+                        </div>
+                      ) : (
+                        <div className="text-red-600 font-semibold">Prototype deadline passed</div>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              )}
+              <Button
+                onClick={() => navigate(`/applications/${id}/contract`)}
+                className="bg-[--gov-accent] hover:bg-[--gov-accent-light] text-white"
+              >
+                Generate Contract
+              </Button>
+            </div>
           )}
         </div>
 
