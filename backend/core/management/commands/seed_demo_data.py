@@ -109,23 +109,48 @@ class Command(BaseCommand):
             'DroneWatch Defence': 'Our autonomous surveillance drones can complement ground-based sensor networks with aerial patrol capabilities. Each drone covers a 10km patrol route with onboard thermal and visual sensors, transmitting alerts to the command centre in real time.',
             'WaterGrid Analytics': 'We will deploy our portable water testing kits across 10 pilot villages, each capable of testing 12 key contaminants including arsenic, fluoride, and coliform bacteria. Results are transmitted via IoT to a central dashboard within minutes, replacing the current 14-day laboratory turnaround.',
             'RuralPay Connect': 'Our fintech platform can facilitate digital payments for PHC services in rural areas, reducing cash-handling overhead. While our core expertise is in payments, we can adapt our offline-first architecture to support health service delivery workflows.',
+            'GreenBridge Robotics': 'Our low-cost robotic weeding unit can be adapted for water-quality sensing by mounting portable test cartridges on the same chassis. We propose deploying 10 units across pilot villages to collect daily water quality readings with zero lab turnaround — results stream to the IMIS dashboard in real time at under ₹40 per test.',
         }
         apps_data = [
-            (startups['MediTriage AI'], c1, 'under_evaluation'),
-            (startups['DiagnoAI'], c1, 'under_evaluation'),
-            (startups['SecureGrid Systems'], c2, 'shortlisted'),
-            (startups['DroneWatch Defence'], c2, 'submitted'),
-            (startups['WaterGrid Analytics'], c3, 'eligible'),
-            (startups['RuralPay Connect'], c1, 'rejected')
+            (startups['MediTriage AI'],     c1, 'under_evaluation'),
+            (startups['DiagnoAI'],          c1, 'under_evaluation'),
+            (startups['SecureGrid Systems'],c2, 'shortlisted'),
+            (startups['DroneWatch Defence'],c2, 'submitted'),
+            (startups['WaterGrid Analytics'],c3,'eligible'),
+            (startups['RuralPay Connect'],  c1, 'rejected'),
+            (startups['GreenBridge Robotics'], c3, 'shortlisted'),
         ]
         apps = []
-        for s, c, app_status in apps_data:
-            app = Application.objects.create(startup=s, challenge=c, status=app_status, solution_brief=solution_briefs[s.name])
+        for s_obj, c_obj, app_status in apps_data:
+            import hashlib
+            brief = solution_briefs[s_obj.name]
+            app = Application.objects.create(
+                startup=s_obj, challenge=c_obj, status=app_status,
+                solution_brief=brief,
+                content_hash=hashlib.sha256(brief.encode()).hexdigest(),
+            )
             apps.append(app)
-            
-            EligibilityResult.objects.create(application=app, rule_name='requires_dpiit', passed=True, reason='Startup holds valid DPIIT recognition (ID present).')
+            EligibilityResult.objects.create(application=app, rule_name='requires_dpiit', passed=True,
+                reason='Startup holds valid DPIIT recognition (ID present).' if s_obj.registration_status == 'dpiit_recognized' else
+                       ('Startup is incorporated; DPIIT recognition pending. Eligible to apply and be evaluated; DPIIT recognition required before final contracting.' if s_obj.registration_status == 'incorporated' else
+                        'Startup has not yet incorporated. Eligible to apply and be evaluated; incorporation and DPIIT recognition required before final contracting.'))
             EligibilityResult.objects.create(application=app, rule_name='min_team_size', passed=True, reason='No minimum team size required for this challenge.')
             EligibilityResult.objects.create(application=app, rule_name='requires_no_blacklist', passed=True, reason='No blacklist record found.')
+
+        # Evaluation for GreenBridge Robotics application
+        ev1 = User.objects.get(username='evaluator1')
+        greenbridge_app = apps[-1]  # last created = GreenBridge
+        Evaluation.objects.create(
+            application=greenbridge_app,
+            evaluator=ev1,
+            score_technical=20,
+            score_novelty=15,
+            score_team=14,
+            score_pilot_readiness=15,
+            score_cost=12,
+            comments='Innovative low-cost approach with strong pilot readiness for rural deployment.',
+            conflict_of_interest=False,
+        )
 
         self.stdout.write("Creating ScaleUpEntries...")
         ScaleUpEntry.objects.create(
