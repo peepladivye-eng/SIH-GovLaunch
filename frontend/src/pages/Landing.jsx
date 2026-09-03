@@ -183,14 +183,14 @@ export default function Landing() {
   useEffect(() => {
     (async () => {
       try {
-        const [sd, cd] = await Promise.allSettled([api.getPublicStats(), api.getChallenges().catch(() => [])]);
+        const [sd, cd] = await Promise.allSettled([api.getPublicStats(), api.getPublicChallenges()]);
         if (sd.status === 'fulfilled') {
           const d = sd.value;
           setStats({ challenges: d.open_challenges ?? 0, startups: d.startups ?? 0, pilots: d.pilots_scaled ?? 0 });
         }
         if (cd.status === 'fulfilled') {
           const list = Array.isArray(cd.value) ? cd.value : (cd.value?.results ?? []);
-          setChallenges(list.filter(c => c.status === 'open').slice(0, 3));
+          setChallenges(list.slice(0, 3));
         }
       } catch (_) {}
     })();
