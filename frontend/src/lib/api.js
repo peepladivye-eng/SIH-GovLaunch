@@ -104,6 +104,7 @@ export const api = {
 
   // Public stats — no auth required
   getPublicStats: () => request('/api/stats/'),
+  getPublicChallenges: () => request('/api/challenges/public/'),
 
   // Supervision
   getSupervisionDuplicates: () => request('/api/supervision/duplicates/'),
