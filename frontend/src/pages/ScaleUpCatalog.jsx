@@ -1,180 +1,228 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { TrendingUp, Building2, Users, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, useSpring, useInView } from 'motion/react';
+import { TrendingUp, Building2, CheckCircle, Zap, ArrowRight } from 'lucide-react';
 import { api } from '../lib/api';
-import { Button } from '../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { useToast } from '../components/ui/toast';
+
+// 3D tilt
+function TiltCard({ children, style, onClick }) {
+  const ref = useRef(null);
+  const rx = useSpring(0, { stiffness: 200, damping: 22 });
+  const ry = useSpring(0, { stiffness: 200, damping: 22 });
+  const onMove = useCallback((e) => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) return;
+    rx.set(((e.clientY - rect.top) / rect.height - 0.5) * -10);
+    ry.set(((e.clientX - rect.left) / rect.width - 0.5) * 10);
+  }, [rx, ry]);
+  return (
+    <motion.div ref={ref} onMouseMove={onMove}
+      onMouseLeave={() => { rx.set(0); ry.set(0); }}
+      onClick={onClick}
+      style={{ ...style, rotateX: rx, rotateY: ry, transformStyle: 'preserve-3d', perspective: 800 }}
+      whileHover={{ scale: 1.02, boxShadow: '0 16px 48px rgba(0,0,0,0.1)' }}
+      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function Reveal({ children, delay = 0 }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-40px' });
+  return (
+    <motion.div ref={ref} initial={{ opacity: 0, y: 20 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.45, delay, ease: [0.25, 0.46, 0.45, 0.94] }}>
+      {children}
+    </motion.div>
+  );
+}
 
 export default function ScaleUpCatalog() {
   const { toast } = useToast();
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
-  // M3.7 — track which entry ids were just adopted this session
   const [justAdopted, setJustAdopted] = useState({});
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   useEffect(() => {
-    fetchEntries();
+    api.getScaleUpEntries().then(d => setEntries(Array.isArray(d) ? d : d?.results ?? [])).catch(console.error).finally(() => setLoading(false));
   }, []);
-
-  const fetchEntries = async () => {
-    try {
-      const data = await api.getScaleUpEntries();
-      setEntries(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleAdopt = async (entryId) => {
     try {
       await api.updateScaleUpEntry(entryId, { adopted: true });
-      toast({ title: 'Adopted!', description: 'You have adopted this pilot.' });
-      // flag this entry so we can animate the new chip (M3.7)
-      setJustAdopted(prev => ({ ...prev, [entryId]: true }));
+      toast({ title: 'Adopted!', description: 'Pilot added to your department.' });
+      setJustAdopted(p => ({ ...p, [entryId]: true }));
       const data = await api.getScaleUpEntries();
-      setEntries(data);
-    } catch (err) {
+      setEntries(Array.isArray(data) ? data : data?.results ?? []);
+    } catch {
       toast({ title: 'Error', description: 'Failed to adopt pilot', variant: 'destructive' });
     }
   };
 
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-
-  if (loading) return <div className="p-6">Loading…</div>;
+  if (loading) return <div style={{ padding: 24, color: '#94A3B8', fontSize: 14 }}>Loading…</div>;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-space-grotesk font-bold text-[--text-primary] flex items-center gap-2">
-          <TrendingUp size={24} className="text-[--gov-accent]" />
-          Scale-Up Catalog
-        </h1>
-        <p className="text-sm text-[--text-secondary] mt-1">
-          Proven pilots ready for wider adoption across government
-        </p>
-      </div>
+    <div style={{ fontFamily: "'Inter',sans-serif" }}>
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+        style={{
+          position: 'relative', overflow: 'hidden', borderRadius: 20, marginBottom: 32,
+          background: 'linear-gradient(135deg, #0D1117 0%, #0A0E1A 55%, #0C1020 100%)',
+          border: '1px solid rgba(255,255,255,0.08)', padding: '28px 36px',
+        }}
+      >
+        <motion.div animate={{ x: [0,20,0], y: [0,-14,0] }} transition={{ duration: 13, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ position: 'absolute', top: -50, left: -50, width: 260, height: 260, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(13,148,136,0.22) 0%, transparent 70%)', filter: 'blur(35px)', pointerEvents: 'none' }} />
+        <motion.div animate={{ x: [0,-14,0], y: [0,18,0] }} transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 3 }}
+          style={{ position: 'absolute', bottom: -40, right: -40, width: 200, height: 200, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(79,70,229,0.18) 0%, transparent 70%)', filter: 'blur(35px)', pointerEvents: 'none' }} />
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 48, height: 48, borderRadius: 13, background: 'rgba(13,148,136,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 24px rgba(13,148,136,0.3)' }}>
+            <TrendingUp size={24} color="#2DD4BF" />
+          </div>
+          <div>
+            <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 22, fontWeight: 800, color: '#fff', margin: 0 }}>
+              Scale-Up Catalog
+            </h1>
+            <p style={{ fontSize: 13, color: '#64748B', margin: '2px 0 0' }}>
+              {entries.length} proven pilot{entries.length !== 1 ? 's' : ''} ready for wider adoption
+            </p>
+          </div>
+        </div>
+      </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {entries.map((entry, index) => (
-          <motion.div
-            key={entry.id}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.05 }}
-          >
-            <Card className="rounded-xl border-[--border] shadow-sm transition-shadow duration-150 hover:shadow-md relative overflow-hidden">
-              {/* Proven ribbon */}
-              {(entry.adopted_count > 0 || entry.has_adopted) && (
-                <div className="absolute top-0 right-0 bg-[--gov-accent] text-white text-xs font-medium px-2 py-1 rounded-bl-lg z-10">
-                  PROVEN PILOT
-                </div>
-              )}
+      {/* Cards */}
+      {entries.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '80px 24px', color: '#94A3B8', fontSize: 14 }}>
+          No scale-up entries yet.
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
+          {entries.map((entry, i) => {
+            const adopted = entry.adopted_count > 0 || entry.has_adopted || justAdopted[entry.id];
+            return (
+              <Reveal key={entry.id} delay={i * 0.07}>
+                <TiltCard style={{
+                  borderRadius: 18, background: '#fff',
+                  border: adopted ? '1px solid #A7F3D0' : '1px solid #E2E8F0',
+                  overflow: 'hidden', position: 'relative',
+                  boxShadow: adopted ? '0 4px 20px rgba(16,185,129,0.12)' : '0 2px 12px rgba(0,0,0,0.05)',
+                }}>
+                  {/* Proven ribbon */}
+                  {adopted && (
+                    <div style={{
+                      position: 'absolute', top: 12, right: -20, background: 'linear-gradient(90deg, #059669, #10B981)',
+                      color: '#fff', fontSize: 10, fontWeight: 800, padding: '4px 28px 4px 10px',
+                      letterSpacing: '0.08em', transform: 'rotate(0deg)',
+                      boxShadow: '0 2px 8px rgba(16,185,129,0.4)',
+                      borderRadius: '4px 0 0 4px',
+                    }}>
+                      PROVEN PILOT
+                    </div>
+                  )}
 
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base pr-20">{entry.pilot_name || entry.name}</CardTitle>
-              </CardHeader>
+                  {/* Top bar */}
+                  <div style={{ height: 4, background: adopted ? 'linear-gradient(90deg, #059669, #10B981)' : 'linear-gradient(90deg, #0D9488, #0891B2)' }} />
 
-              <CardContent className="space-y-4">
-                {/* Startup */}
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
-                    <span className="text-sm font-medium text-gray-600">
-                      {(entry.startup_name || 'S').charAt(0)}
-                    </span>
-                  </div>
-                  <span className="text-sm text-[--text-secondary]">
-                    {entry.startup_name || `Startup #${entry.startup}`}
-                  </span>
-                </div>
+                  <div style={{ padding: '20px 22px 22px' }}>
+                    {/* Title */}
+                    <h3 style={{ fontSize: 15, fontWeight: 700, color: '#0B0F19', lineHeight: 1.4, marginBottom: 8, paddingRight: adopted ? 60 : 0 }}>
+                      {entry.pilot_name || entry.original_challenge_title || 'Untitled Pilot'}
+                    </h3>
 
-                {/* Outcome */}
-                <div className="flex items-start gap-2">
-                  <TrendingUp size={16} className="text-[--gov-accent] mt-0.5 shrink-0" />
-                  <p className="text-sm text-[--text-secondary]">
-                    {entry.outcome_summary || 'Successful pilot with measurable outcomes.'}
-                  </p>
-                </div>
+                    {/* Dept + startup */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748B', marginBottom: 12 }}>
+                      <Building2 size={13} />
+                      <span>{entry.originating_department_name || entry.startup_name || '—'}</span>
+                    </div>
 
-                {/* Avatar stack of adopting departments */}
-                {entry.adopting_departments && entry.adopting_departments.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <div className="flex -space-x-2">
-                      {entry.adopting_departments.slice(0, 3).map((dept, idx) => {
-                        const isNew = idx === entry.adopting_departments.length - 1 && justAdopted[entry.id];
-                        const chip = (
-                          <div
-                            key={idx}
-                            className="w-7 h-7 rounded-full bg-[--gov-accent] border-2 border-white flex items-center justify-center"
-                            title={dept.name || dept}
-                          >
-                            <span className="text-white text-xs font-medium">
-                              {(dept.name || dept).charAt(0)}
-                            </span>
-                          </div>
-                        );
-                        // M3.7 — spring pop on the newly-added department chip
-                        return isNew ? (
-                          <motion.div
-                            key={idx}
-                            initial={{ scale: 0, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ type: 'spring', stiffness: 500, damping: 20 }}
-                          >
-                            {chip}
-                          </motion.div>
-                        ) : chip;
-                      })}
-                      {entry.adopting_departments.length > 3 && (
-                        <div className="w-7 h-7 rounded-full bg-gray-400 border-2 border-white flex items-center justify-center">
-                          <span className="text-white text-xs">+{entry.adopting_departments.length - 3}</span>
+                    {/* Outcome */}
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                      <TrendingUp size={15} color="#0D9488" style={{ flexShrink: 0, marginTop: 1 }} />
+                      <p style={{ fontSize: 13, color: '#475569', lineHeight: 1.55, margin: 0 }}>
+                        {entry.outcome_summary || 'Successful pilot with measurable outcomes.'}
+                      </p>
+                    </div>
+
+                    {/* Adopters */}
+                    {entry.adopting_departments?.length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                        <div style={{ display: 'flex' }}>
+                          {entry.adopting_departments.slice(0, 4).map((dept, idx) => (
+                            <motion.div key={idx}
+                              initial={justAdopted[entry.id] && idx === entry.adopting_departments.length - 1
+                                ? { scale: 0, opacity: 0 } : { scale: 1, opacity: 1 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                              title={dept.name || dept}
+                              style={{
+                                width: 26, height: 26, borderRadius: '50%',
+                                background: 'linear-gradient(135deg, #0D9488, #0891B2)',
+                                border: '2px solid #fff', marginLeft: idx > 0 ? -8 : 0,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                              }}>
+                              <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>
+                                {(dept.name || dept).charAt(0)}
+                              </span>
+                            </motion.div>
+                          ))}
+                          {entry.adopting_departments.length > 4 && (
+                            <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#E2E8F0',
+                              border: '2px solid #fff', marginLeft: -8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <span style={{ fontSize: 9, fontWeight: 700, color: '#64748B' }}>
+                                +{entry.adopting_departments.length - 4}
+                              </span>
+                            </div>
+                          )}
                         </div>
+                        <span style={{ fontSize: 12, color: '#94A3B8' }}>
+                          {entry.adopting_departments.length} dept{entry.adopting_departments.length > 1 ? 's' : ''} adopted
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Footer */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      paddingTop: 14, borderTop: '1px solid #F1F5F9' }}>
+                      <span style={{ fontSize: 12, color: '#94A3B8' }}>
+                        {entry.adopted_count || 0} adoptions
+                      </span>
+
+                      {user.role === 'department' && (
+                        entry.has_adopted ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#059669', fontWeight: 600 }}>
+                            <CheckCircle size={15} />
+                            Adopted
+                          </div>
+                        ) : (
+                          <motion.button onClick={() => handleAdopt(entry.id)}
+                            whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 6,
+                              padding: '7px 16px', borderRadius: 9, border: 'none', cursor: 'pointer',
+                              background: 'linear-gradient(135deg, #0D9488, #0891B2)',
+                              color: '#fff', fontSize: 13, fontWeight: 600,
+                              boxShadow: '0 3px 12px rgba(13,148,136,0.35)',
+                            }}
+                          >
+                            <Zap size={14} /> Adopt
+                          </motion.button>
+                        )
                       )}
                     </div>
-                    <span className="text-xs text-[--text-secondary]">
-                      {entry.adopting_departments.length} dept{entry.adopting_departments.length > 1 ? 's' : ''} adopted
-                    </span>
                   </div>
-                )}
-
-                {/* Stats row */}
-                <div className="flex items-center gap-4 pt-2 border-t border-[--border]">
-                  <div className="flex items-center gap-1 text-sm text-[--text-secondary]">
-                    <Users size={14} />
-                    <span>{entry.adopted_count || 0} adoptions</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-sm text-[--text-secondary]">
-                    <Building2 size={14} />
-                    <span>{entry.deployment_count || 0} deployments</span>
-                  </div>
-                </div>
-
-                {/* Adopt button — departments only */}
-                {user.role === 'department' && (
-                  <Button
-                    onClick={() => handleAdopt(entry.id)}
-                    variant={entry.has_adopted ? 'outline' : 'default'}
-                    className={`w-full ${entry.has_adopted ? '' : 'bg-[--gov-accent] hover:bg-[--gov-accent-light] text-white'}`}
-                    disabled={entry.has_adopted}
-                  >
-                    {entry.has_adopted ? (
-                      <><CheckCircle size={16} className="mr-2" />Adopted</>
-                    ) : 'Adopt This Pilot'}
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-
-        {entries.length === 0 && (
-          <div className="col-span-full text-center py-12 text-[--text-secondary]">
-            No scale-up entries yet.
-          </div>
-        )}
-      </div>
+                </TiltCard>
+              </Reveal>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
