@@ -84,13 +84,28 @@ export default function Login() {
           }}
         />
 
-        {/* Logo */}
-        <div className="relative z-10 flex items-center gap-2.5">
-          <div className="w-5 h-5 rounded-full shadow-lg" style={{
-            background: 'conic-gradient(from 0deg, #FF9933 0deg 120deg, #ffffff 120deg 240deg, #138808 240deg 360deg)',
-            boxShadow: '0 0 12px rgba(255,153,51,0.5)',
-          }} />
-          <span className="font-space-grotesk text-xl font-bold text-white tracking-tight">GovLaunch</span>
+        {/* Logo + back to home */}
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-5 h-5 rounded-full shadow-lg" style={{
+              background: 'conic-gradient(from 0deg, #FF9933 0deg 120deg, #ffffff 120deg 240deg, #138808 240deg 360deg)',
+              boxShadow: '0 0 12px rgba(255,153,51,0.5)',
+            }} />
+            <span className="font-space-grotesk text-xl font-bold text-white tracking-tight">GovLaunch</span>
+          </div>
+          <motion.button
+            onClick={() => navigate('/')}
+            whileHover={{ x: -3 }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 8, padding: '6px 12px', color: '#94A3B8',
+              fontSize: 13, fontWeight: 500, cursor: 'pointer',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+            Home
+          </motion.button>
         </div>
 
         {/* Headline */}
