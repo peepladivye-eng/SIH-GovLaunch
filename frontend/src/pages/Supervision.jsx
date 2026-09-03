@@ -1,240 +1,233 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, ShieldCheck, ChevronDown, ChevronUp, Save } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Clock, ShieldCheck, Save, Cpu, AlertTriangle, CheckCircle, Key, Zap } from 'lucide-react';
 import { api } from '../lib/api';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Input } from '../components/ui/input';
-import { Button } from '../components/ui/button';
 import { useToast } from '../components/ui/toast';
 
-// ── Similarity badge ─────────────────────────────────────────────────────────
-function SimilarityBadge({ value }) {
-  const pct = Math.round(value * 100);
-  const color = value >= 0.9
-    ? { bg: '#FEE2E2', text: '#DC2626' }   // danger
-    : { bg: '#FEF3C7', text: '#D97706' };  // warning
+const FIELD = {
+  width: '100%', padding: '10px 14px', borderRadius: 10, height: 44,
+  border: '1.5px solid #E2E8F0', background: '#F8FAFC',
+  fontSize: 14, color: '#0B0F19', outline: 'none', boxSizing: 'border-box',
+  fontFamily: "'Inter',sans-serif", transition: 'border-color 0.15s, box-shadow 0.15s',
+};
+
+function Toggle({ checked, onChange }) {
   return (
-    <span
-      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
-      style={{ backgroundColor: color.bg, color: color.text }}
-    >
-      {pct}%
-    </span>
+    <div onClick={() => onChange(!checked)} style={{ cursor: 'pointer', width: 44, height: 24, borderRadius: 100,
+      background: checked ? 'linear-gradient(90deg,#0D9488,#0891B2)' : '#E2E8F0',
+      position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+      <motion.div animate={{ x: checked ? 22 : 2 }} transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+        style={{ position: 'absolute', top: 2, width: 20, height: 20, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.15)' }} />
+    </div>
   );
 }
 
-// ── Switch (plain, no dep) ───────────────────────────────────────────────────
-function Toggle({ checked, onChange }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
-        checked ? 'bg-[--gov-accent]' : 'bg-gray-300'
-      }`}
-    >
-      <span
-        className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 ${
-          checked ? 'translate-x-4' : 'translate-x-0'
-        }`}
-      />
-    </button>
-  );
-}
+const PROVIDER_INFO = {
+  openai:    { name: 'OpenAI GPT-4o',              placeholder: 'sk-...',       color: '#10B981' },
+  anthropic: { name: 'Anthropic Claude',            placeholder: 'sk-ant-...',   color: '#7C3AED' },
+  gemini:    { name: 'Google Gemini',               placeholder: 'AIzaSy...',    color: '#F59E0B' },
+};
 
 export default function Supervision() {
   const { toast } = useToast();
-
-  // ── Duplicates ─────────────────────────────────────────────────────────────
-  const [duplicates, setDuplicates]       = useState([]);
-  const [dupeLoading, setDupeLoading]     = useState(true);
-
-  // ── AI Provider Config ─────────────────────────────────────────────────────
-  const [existingCfg, setExistingCfg]     = useState(null);   // null = not loaded yet
-  const [provider, setProvider]           = useState('openai');
-  const [apiKey, setApiKey]               = useState('');
-  const [enabled, setEnabled]             = useState(true);
-  const [cfgSaving, setCfgSaving]         = useState(false);
-  const [cfgLoading, setCfgLoading]       = useState(true);
+  const [dupes, setDupes]       = useState([]);
+  const [dupeLoading, setDL]    = useState(true);
+  const [cfg, setCfg]           = useState(null);
+  const [cfgLoading, setCL]     = useState(true);
+  const [provider, setProvider] = useState('openai');
+  const [apiKey, setApiKey]     = useState('');
+  const [enabled, setEnabled]   = useState(true);
+  const [saving, setSaving]     = useState(false);
+  const [keyFocus, setKeyFocus] = useState(false);
 
   useEffect(() => {
-    // Fetch both in parallel
     Promise.all([
-      api.getSupervisionDuplicates()
-        .then(d => setDuplicates(Array.isArray(d) ? d : []))
-        .catch(() => setDuplicates([]))
-        .finally(() => setDupeLoading(false)),
-
-      api.getAIProviderConfig()
-        .then(cfg => {
-          if (cfg) {
-            setExistingCfg(cfg);
-            setProvider(cfg.provider);
-            setEnabled(cfg.enabled);
-            // Don't prefill the key input — show masked placeholder instead
-          }
-        })
-        .catch(() => {})
-        .finally(() => setCfgLoading(false)),
+      api.getSupervisionDuplicates().then(d => setDupes(Array.isArray(d) ? d : [])).catch(() => setDupes([])).finally(() => setDL(false)),
+      api.getAIProviderConfig().then(c => { if (c) { setCfg(c); setProvider(c.provider); setEnabled(c.enabled); } }).catch(() => {}).finally(() => setCL(false)),
     ]);
   }, []);
 
-  const handleSaveConfig = async (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    setCfgSaving(true);
+    setSaving(true);
     try {
       const payload = { provider, enabled };
-      // Only send api_key if user typed something new
       if (apiKey.trim()) payload.api_key = apiKey.trim();
       const saved = await api.saveAIProviderConfig(payload);
-      setExistingCfg(saved);
-      setApiKey('');
+      setCfg(saved); setApiKey('');
       toast({ title: 'Configuration saved.' });
     } catch (err) {
       toast({ title: 'Save failed', description: err.message, variant: 'destructive' });
-    } finally {
-      setCfgSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
-  const providerPlaceholder = {
-    openai:    'sk-...',
-    anthropic: 'sk-ant-...',
-    gemini:    'AIzaSy...',
-  }[provider] ?? 'API key…';
+  const pInfo = PROVIDER_INFO[provider] ?? PROVIDER_INFO.openai;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-10">
-      <div>
-        <h1 className="text-2xl font-space-grotesk font-bold text-[--text-primary] flex items-center gap-2">
-          <ShieldCheck size={24} className="text-[--gov-accent]" />
-          Supervision
-        </h1>
-        <p className="text-sm text-[--text-secondary] mt-1">
-          Detect duplicate submissions and configure AI-assisted novelty checks.
-        </p>
-      </div>
+    <div style={{ fontFamily: "'Inter',sans-serif", maxWidth: 800 }}>
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+        style={{
+          position: 'relative', overflow: 'hidden', borderRadius: 20, marginBottom: 32,
+          background: 'linear-gradient(135deg, #0D1117 0%, #0A0E1A 55%, #0C1020 100%)',
+          border: '1px solid rgba(255,255,255,0.08)', padding: '28px 32px',
+        }}>
+        <motion.div animate={{ x: [0,16,0], y: [0,-10,0] }} transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ position: 'absolute', top: -40, right: -40, width: 220, height: 220, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(13,148,136,0.22) 0%, transparent 70%)', filter: 'blur(30px)', pointerEvents: 'none' }} />
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(13,148,136,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 20px rgba(13,148,136,0.25)' }}>
+            <ShieldCheck size={22} color="#2DD4BF" />
+          </div>
+          <div>
+            <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 22, fontWeight: 800, color: '#fff', margin: 0 }}>Supervision</h1>
+            <p style={{ fontSize: 13, color: '#64748B', margin: '2px 0 0' }}>Detect duplicate submissions and configure AI-assisted novelty checks</p>
+          </div>
+        </div>
+      </motion.div>
 
-      {/* ── Section 1: Flagged Duplicates ───────────────────────────────────── */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-[--text-primary]">Flagged Duplicates</h2>
+      {/* ── Flagged Duplicates ── */}
+      <section style={{ marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <AlertTriangle size={18} color="#D97706" />
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0B0F19', margin: 0 }}>Flagged Duplicates</h2>
+          {!dupeLoading && (
+            <span style={{ marginLeft: 'auto', fontSize: 12, color: '#94A3B8', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 100, padding: '2px 10px' }}>
+              {dupes.length} flagged
+            </span>
+          )}
+        </div>
 
-        {dupeLoading ? (
-          <p className="text-sm text-[--text-secondary]">Computing similarities…</p>
-        ) : duplicates.length === 0 ? (
-          <p className="text-sm text-gray-500">No flagged duplicates found.</p>
-        ) : (
-          <Card className="rounded-xl border-[--border] shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-[--surface-alt]">
-                  <tr>
-                    <th className="text-left p-4 font-medium text-[--text-secondary]">Startup A</th>
-                    <th className="text-left p-4 font-medium text-[--text-secondary]">Startup B</th>
-                    <th className="text-left p-4 font-medium text-[--text-secondary]">Similarity</th>
-                    <th className="text-left p-4 font-medium text-[--text-secondary]">Earlier Submission</th>
+        <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+          {dupeLoading ? (
+            <div style={{ padding: '32px 24px', textAlign: 'center', color: '#94A3B8', fontSize: 14 }}>Computing TF-IDF similarities…</div>
+          ) : dupes.length === 0 ? (
+            <div style={{ padding: '40px 24px', textAlign: 'center' }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                <CheckCircle size={22} color="#10B981" />
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#0B0F19', marginBottom: 4 }}>No duplicates detected</div>
+              <div style={{ fontSize: 13, color: '#94A3B8' }}>All submissions have unique solution briefs above the 75% similarity threshold.</div>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#F8FAFC' }}>
+                    {['Startup A', 'Startup B', 'Similarity', 'Earlier Submission'].map(h => (
+                      <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{h}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {duplicates.map((row, i) => (
-                    <tr key={i} className="border-t border-[--border]">
-                      <td className="p-4 font-medium text-[--text-primary]">
-                        {row.application_a.startup_name}
-                      </td>
-                      <td className="p-4 font-medium text-[--text-primary]">
-                        {row.application_b.startup_name}
-                      </td>
-                      <td className="p-4">
-                        <SimilarityBadge value={row.similarity} />
-                      </td>
-                      <td className="p-4 text-[--text-secondary]">
-                        <div className="flex items-center gap-1.5">
-                          <Clock size={14} />
-                          {row.earlier === 'application_a'
-                            ? row.application_a.startup_name
-                            : row.application_b.startup_name}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {dupes.map((row, i) => {
+                    const pct = Math.round(row.similarity * 100);
+                    const isHigh = row.similarity >= 0.9;
+                    return (
+                      <tr key={i} style={{ borderTop: '1px solid #F1F5F9' }}>
+                        <td style={{ padding: '14px 16px', fontSize: 14, fontWeight: 600, color: '#0B0F19' }}>{row.application_a.startup_name}</td>
+                        <td style={{ padding: '14px 16px', fontSize: 14, fontWeight: 600, color: '#0B0F19' }}>{row.application_b.startup_name}</td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 100, background: isHigh ? '#FEE2E2' : '#FEF3C7', color: isHigh ? '#DC2626' : '#D97706' }}>
+                            {pct}%
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#64748B' }}>
+                            <Clock size={13} />
+                            {row.earlier === 'application_a' ? row.application_a.startup_name : row.application_b.startup_name}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-          </Card>
-        )}
+          )}
+        </div>
       </section>
 
-      {/* ── Section 2: AI Provider ──────────────────────────────────────────── */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-[--text-primary]">AI Provider</h2>
+      {/* ── AI Provider ── */}
+      <section>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <Cpu size={18} color="#4F46E5" />
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0B0F19', margin: 0 }}>AI Provider</h2>
+        </div>
 
-        {cfgLoading ? (
-          <p className="text-sm text-[--text-secondary]">Loading configuration…</p>
-        ) : (
-          <Card className="rounded-xl border-[--border] shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-base">
-                {existingCfg ? 'Update Configuration' : 'Configure Provider'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSaveConfig} className="space-y-5">
+        <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+          <div style={{ height: 3, background: `linear-gradient(90deg, ${pInfo.color}, ${pInfo.color}44)`, transition: 'background 0.3s' }} />
+          <div style={{ padding: '24px' }}>
+            {cfgLoading ? (
+              <div style={{ color: '#94A3B8', fontSize: 14 }}>Loading configuration…</div>
+            ) : (
+              <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 {/* Provider selector */}
                 <div>
-                  <label className="block text-sm font-medium text-[--text-secondary] mb-1.5">
-                    Provider
-                  </label>
-                  <select
-                    value={provider}
-                    onChange={e => setProvider(e.target.value)}
-                    className="flex h-10 w-full rounded-lg border border-[--border] bg-white px-3 py-2 text-sm text-[--text-primary] focus:outline-none focus:ring-2 focus:ring-[--gov-accent]"
-                  >
-                    <option value="openai">OpenAI</option>
-                    <option value="anthropic">Anthropic</option>
-                    <option value="gemini">Gemini</option>
-                  </select>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 8 }}>Provider</label>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    {Object.entries(PROVIDER_INFO).map(([key, info]) => {
+                      const active = provider === key;
+                      return (
+                        <motion.button key={key} type="button" onClick={() => setProvider(key)}
+                          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                          style={{ flex: 1, padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+                            border: `2px solid ${active ? info.color : '#E2E8F0'}`,
+                            background: active ? `${info.color}0e` : '#F8FAFC',
+                            transition: 'all 0.15s' }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: active ? info.color : '#374151' }}>{info.name}</div>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* API Key */}
                 <div>
-                  <label className="block text-sm font-medium text-[--text-secondary] mb-1.5">
-                    API Key
-                    {existingCfg?.api_key_masked && (
-                      <span className="ml-2 text-xs font-mono text-gray-400">
-                        (current: {existingCfg.api_key_masked})
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <Key size={13} /> API Key
+                    </label>
+                    {cfg?.api_key_masked && (
+                      <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#94A3B8', background: '#F1F5F9', padding: '2px 8px', borderRadius: 4 }}>
+                        Current: {cfg.api_key_masked}
                       </span>
                     )}
-                  </label>
-                  <Input
-                    type="password"
-                    value={apiKey}
-                    onChange={e => setApiKey(e.target.value)}
-                    placeholder={existingCfg ? 'Leave blank to keep existing key' : providerPlaceholder}
-                    autoComplete="off"
-                  />
+                  </div>
+                  <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)}
+                    placeholder={cfg ? 'Leave blank to keep existing key' : pInfo.placeholder}
+                    onFocus={() => setKeyFocus(true)} onBlur={() => setKeyFocus(false)}
+                    style={{ ...FIELD, borderColor: keyFocus ? pInfo.color : '#E2E8F0', boxShadow: keyFocus ? `0 0 0 3px ${pInfo.color}18` : 'none' }} />
                 </div>
 
                 {/* Enabled toggle */}
-                <div className="flex items-center gap-3">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: '#F8FAFC', borderRadius: 10, border: '1px solid #E2E8F0' }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#0B0F19' }}>Enable AI Novelty Checks</div>
+                    <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>When enabled, departments can run AI analysis on any application</div>
+                  </div>
                   <Toggle checked={enabled} onChange={setEnabled} />
-                  <span className="text-sm text-[--text-primary]">
-                    {enabled ? 'Enabled' : 'Disabled'}
-                  </span>
                 </div>
 
-                <Button
-                  type="submit"
-                  disabled={cfgSaving}
-                  className="bg-[--gov-accent] hover:bg-[--gov-accent-light] text-white"
-                >
-                  <Save size={16} className="mr-2" />
-                  {cfgSaving ? 'Saving…' : existingCfg ? 'Update Configuration' : 'Save Configuration'}
-                </Button>
+                {/* Save */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <motion.button type="submit" disabled={saving}
+                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '10px 22px', borderRadius: 10, border: 'none', cursor: saving ? 'not-allowed' : 'pointer',
+                      background: saving ? '#94A3B8' : `linear-gradient(135deg, ${pInfo.color}, ${pInfo.color}cc)`,
+                      color: '#fff', fontWeight: 700, fontSize: 14,
+                      boxShadow: `0 4px 14px ${pInfo.color}35`,
+                    }}>
+                    <Save size={16} />
+                    {saving ? 'Saving…' : cfg ? 'Update Configuration' : 'Save Configuration'}
+                  </motion.button>
+                </div>
               </form>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </div>
+        </div>
       </section>
     </div>
   );
