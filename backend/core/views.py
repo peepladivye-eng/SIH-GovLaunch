@@ -131,6 +131,25 @@ def public_stats_view(request):
     })
 
 
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def public_challenges_view(request):
+    """Public list of open challenges — no auth required. Used on Landing page."""
+    challenges = Challenge.objects.filter(status='open').order_by('-created_at')[:6]
+    data = []
+    for c in challenges:
+        data.append({
+            'id':              c.id,
+            'title':           c.title,
+            'department_name': c.department.name,
+            'budget_ceiling':  c.budget_ceiling,
+            'timeline_weeks':  c.timeline_weeks,
+            'sector_tags':     c.sector_tags,
+            'created_at':      c.created_at.isoformat(),
+        })
+    return Response(data)
+
+
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
