@@ -1,110 +1,164 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-import { FileText, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { motion, useInView } from 'motion/react';
+import { ClipboardCheck, Clock, CheckCircle, AlertCircle, ArrowRight, Star } from 'lucide-react';
 import { api } from '../lib/api';
-import { Card, CardContent } from '../components/ui/card';
 import StatusBadge from '../components/StatusBadge';
-import StatCard from '../components/StatCard';
+
+function Stat({ icon: Icon, value, label, accent }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true });
+  return (
+    <motion.div ref={ref}
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
+      transition={{ duration: 0.5 }}
+      style={{
+        borderRadius: 16, padding: '20px', background: '#fff',
+        border: `1px solid ${accent}22`,
+        boxShadow: `0 4px 20px ${accent}12`,
+        position: 'relative', overflow: 'hidden',
+      }}
+    >
+      <div style={{
+        position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%',
+        background: `radial-gradient(circle, ${accent}18 0%, transparent 70%)`,
+        pointerEvents: 'none',
+      }} />
+      <div style={{ width: 40, height: 40, borderRadius: 10, background: `${accent}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+        <Icon size={20} color={accent} />
+      </div>
+      <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 36, fontWeight: 800, color: '#0B0F19', lineHeight: 1, marginBottom: 4 }}>
+        {value}
+      </div>
+      <div style={{ fontSize: 13, color: '#64748B' }}>{label}</div>
+      <motion.div
+        initial={{ scaleX: 0 }} animate={inView ? { scaleX: 1 } : {}}
+        transition={{ duration: 0.6, delay: 0.2 }}
+        style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3,
+          background: `linear-gradient(90deg, ${accent}, ${accent}44)`, transformOrigin: 'left' }}
+      />
+    </motion.div>
+  );
+}
 
 export default function EvaluatorReview() {
   const navigate = useNavigate();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   useEffect(() => {
-    const fetchApplications = async () => {
-      try {
-        const apps = await api.getApplications();
-        setApplications(apps);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchApplications();
+    api.getApplications().then(d => {
+      setApplications(Array.isArray(d) ? d : d?.results ?? []);
+    }).catch(console.error).finally(() => setLoading(false));
   }, []);
 
-  const pendingApps = applications.filter(a => a.status === 'under_evaluation');
-  const evaluatedApps = applications.filter(a => a.status === 'shortlisted' || a.status === 'rejected');
+  const pending   = applications.filter(a => a.status === 'under_evaluation');
+  const shortlist = applications.filter(a => a.status === 'shortlisted');
+  const rejected  = applications.filter(a => a.status === 'rejected');
 
-  if (loading) {
-    return <div className="p-6">Loading...</div>;
-  }
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, color: '#94A3B8', fontSize: 14 }}>
+      Loading…
+    </div>
+  );
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-space-grotesk font-bold text-[--text-primary]">
-          Welcome, Evaluator
-        </h1>
-        <p className="text-sm text-[--text-secondary]">
-          Review and score startup applications
-        </p>
-      </div>
+    <div style={{ fontFamily: "'Inter',sans-serif" }}>
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+        style={{
+          position: 'relative', overflow: 'hidden', borderRadius: 20, marginBottom: 28,
+          background: 'linear-gradient(135deg, #0D1117 0%, #0A0E1A 55%, #0C1020 100%)',
+          border: '1px solid rgba(255,255,255,0.08)', padding: '28px 32px',
+        }}
+      >
+        <motion.div animate={{ x: [0,18,0], y: [0,-12,0] }} transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ position: 'absolute', top: -50, right: -50, width: 240, height: 240, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(217,119,6,0.22) 0%, transparent 70%)', filter: 'blur(30px)', pointerEvents: 'none' }} />
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(217,119,6,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 20px rgba(217,119,6,0.3)' }}>
+              <ClipboardCheck size={22} color="#FCD34D" />
+            </div>
+            <div>
+              <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 22, fontWeight: 800, color: '#fff', margin: 0 }}>
+                Assessment Hub
+              </h1>
+              <p style={{ fontSize: 13, color: '#64748B', margin: 0 }}>
+                Review and score startup applications
+              </p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <StatCard
-          icon={Clock}
-          value={pendingApps.length}
-          label="Pending Review"
-          color="amber"
-          countUp={true}
-        />
-        <StatCard
-          icon={CheckCircle}
-          value={evaluatedApps.filter(a => a.status === 'shortlisted').length}
-          label="Shortlisted"
-          color="green"
-          countUp={true}
-        />
-        <StatCard
-          icon={AlertCircle}
-          value={evaluatedApps.filter(a => a.status === 'rejected').length}
-          label="Rejected"
-          color="red"
-          countUp={true}
-        />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 28 }}>
+        <Stat icon={Clock}        value={pending.length}   label="Pending Review"  accent="#D97706" />
+        <Stat icon={CheckCircle}  value={shortlist.length} label="Shortlisted"     accent="#10B981" />
+        <Stat icon={AlertCircle}  value={rejected.length}  label="Not Selected"   accent="#EF4444" />
       </div>
 
-      {/* Applications List */}
-      <Card className="rounded-xl border-[--border] shadow-sm">
-        <div className="p-5 border-b border-[--border]">
-          <h2 className="font-semibold text-[--text-primary]">Applications for Review</h2>
+      {/* Applications list */}
+      <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Star size={16} color="#D97706" />
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#0B0F19' }}>Applications for Review</span>
+          <span style={{ marginLeft: 'auto', fontSize: 12, color: '#94A3B8', background: '#F8FAFC',
+            border: '1px solid #E2E8F0', borderRadius: 100, padding: '2px 10px' }}>
+            {pending.length} pending
+          </span>
         </div>
-        <div className="divide-y divide-[--border]">
-            {pendingApps.map((app) => (
-              <div
-                key={app.id}
-                className="p-5 hover:bg-gray-50 cursor-pointer flex items-center justify-between"
-                onClick={() => navigate(`/evaluate/${app.id}`)}
-              >
-                <div>
-                  <div className="font-medium text-[--text-primary]">
-                    {app.challenge_title || `Application #${app.id}`}
-                  </div>
-                  <div className="text-sm text-[--text-secondary] mt-1">
-                    {app.startup_name || `Startup #${app.startup}`}
-                  </div>
+
+        {pending.length === 0 ? (
+          <div style={{ padding: '60px 24px', textAlign: 'center' }}>
+            <div style={{ width: 56, height: 56, borderRadius: 14, background: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+              <CheckCircle size={26} color="#10B981" />
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#0B0F19', marginBottom: 4 }}>All caught up!</div>
+            <div style={{ fontSize: 13, color: '#94A3B8' }}>No applications pending review.</div>
+          </div>
+        ) : (
+          pending.map((app, i) => (
+            <motion.div key={app.id}
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: i * 0.06 }}
+              onClick={() => navigate(`/evaluate/${app.id}`)}
+              whileHover={{ background: '#F8FAFC' }}
+              style={{
+                display: 'flex', alignItems: 'center', padding: '16px 20px',
+                borderBottom: i < pending.length - 1 ? '1px solid #F1F5F9' : 'none',
+                cursor: 'pointer', transition: 'background 0.12s',
+              }}
+            >
+              {/* Score indicator */}
+              <div style={{ width: 42, height: 42, borderRadius: 11, background: 'linear-gradient(135deg,#FEF3C7,#FDE68A)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 14, flexShrink: 0 }}>
+                <ClipboardCheck size={19} color="#D97706" />
+              </div>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#0B0F19', marginBottom: 3,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {app.challenge_title || `Application #${app.id}`}
                 </div>
-                <div className="flex items-center gap-4">
-                  <StatusBadge status={app.status} />
-                  <div className="text-[--text-secondary] text-sm">
-                    Submitted {new Date(app.created_at || app.submitted_at).toLocaleDateString()}
-                  </div>
+                <div style={{ fontSize: 12, color: '#64748B' }}>
+                  {app.startup_name || `Startup #${app.startup}`}
                 </div>
               </div>
-            ))}
-          {pendingApps.length === 0 && (
-            <div className="p-8 text-center text-[--text-secondary]">
-              No applications pending review.
-            </div>
-          )}
-        </div>
-      </Card>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+                <StatusBadge status={app.status} />
+                <div style={{ fontSize: 12, color: '#94A3B8' }}>
+                  {new Date(app.created_at || app.submitted_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                </div>
+                <ArrowRight size={16} color="#CBD5E1" />
+              </div>
+            </motion.div>
+          ))
+        )}
+      </div>
     </div>
   );
 }
