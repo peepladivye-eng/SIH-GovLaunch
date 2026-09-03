@@ -481,62 +481,108 @@ export default function Landing() {
           </Reveal>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 24 }}>
-            {(challenges.length > 0 ? challenges : [{}, {}, {}]).map((c, i) => (
-              <Reveal key={c.id ?? i} direction="up" delay={i * 0.12}>
-                <TiltCard
-                  style={{
-                    borderRadius: 20, overflow: 'hidden', cursor: 'pointer',
-                    background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
-                    minHeight: 220,
-                  }}
-                >
-                  {/* Sector color top bar */}
-                  <motion.div
-                    initial={{ scaleX: 0 }}
-                    animate={{ scaleX: 1 }}
-                    transition={{ duration: 0.6, delay: 0.3 + i * 0.1 }}
+            {challenges.length === 0
+              ? [0,1,2].map(i => (
+                  /* Skeleton cards with visible structure */
+                  <motion.div key={i}
+                    initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
                     style={{
-                      height: 3, transformOrigin: 'left',
-                      background: `linear-gradient(90deg, ${getSectorColor(c.sector_tags)}, ${getSectorColor(c.sector_tags)}55)`,
+                      borderRadius: 20, overflow: 'hidden', minHeight: 200,
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.1)',
                     }}
-                  />
-
-                  <div style={{ padding: 24 }} onClick={() => navigate('/login')}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                      {c.id && isNew(c.created_at) && (
-                        <motion.span
-                          animate={{ opacity: [1, 0.6, 1] }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                          style={{
-                            fontSize: 10, fontWeight: 800, background: '#FF9933', color: '#050810',
-                            padding: '3px 9px', borderRadius: 100, letterSpacing: '0.08em',
-                          }}
-                        >
-                          NEW
-                        </motion.span>
-                      )}
+                  >
+                    <div style={{ height: 3, background: ['#FF9933','#4F46E5','#138808'][i] }} />
+                    <div style={{ padding: 24 }}>
+                      <div style={{ height: 14, width: '65%', borderRadius: 6, background: 'rgba(255,255,255,0.08)', marginBottom: 10 }} />
+                      <div style={{ height: 10, width: '45%', borderRadius: 6, background: 'rgba(255,255,255,0.05)', marginBottom: 20 }} />
+                      <div style={{ height: 10, width: '80%', borderRadius: 6, background: 'rgba(255,255,255,0.05)', marginBottom: 6 }} />
+                      <div style={{ height: 10, width: '60%', borderRadius: 6, background: 'rgba(255,255,255,0.05)' }} />
                     </div>
+                  </motion.div>
+                ))
+              : challenges.map((c, i) => (
+                  <Reveal key={c.id} direction="up" delay={i * 0.12}>
+                    <TiltCard
+                      style={{
+                        borderRadius: 20, overflow: 'hidden', cursor: 'pointer',
+                        background: 'rgba(255,255,255,0.07)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        minHeight: 200,
+                      }}
+                    >
+                      {/* Vibrant sector top bar */}
+                      <motion.div
+                        initial={{ scaleX: 0 }} animate={{ scaleX: 1 }}
+                        transition={{ duration: 0.7, delay: 0.3 + i * 0.1 }}
+                        style={{
+                          height: 4, transformOrigin: 'left',
+                          background: `linear-gradient(90deg, ${getSectorColor(c.sector_tags)}, ${getSectorColor(c.sector_tags)}88)`,
+                          boxShadow: `0 0 12px ${getSectorColor(c.sector_tags)}88`,
+                        }}
+                      />
 
-                    {c.title ? (
-                      <>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: '#F1F5F9', lineHeight: 1.4, marginBottom: 8 }}>
+                      <div style={{ padding: '20px 24px 24px' }} onClick={() => navigate('/login')}>
+                        {/* NEW badge */}
+                        {isNew(c.created_at) && (
+                          <motion.span
+                            animate={{ opacity: [1, 0.6, 1] }} transition={{ duration: 2, repeat: Infinity }}
+                            style={{
+                              display: 'inline-block', marginBottom: 12,
+                              fontSize: 10, fontWeight: 800, background: '#FF9933', color: '#050810',
+                              padding: '3px 9px', borderRadius: 100, letterSpacing: '0.08em',
+                            }}
+                          >
+                            NEW
+                          </motion.span>
+                        )}
+
+                        {/* Title */}
+                        <div style={{ fontSize: 16, fontWeight: 700, color: '#F1F5F9', lineHeight: 1.4, marginBottom: 6 }}>
                           {c.title}
                         </div>
-                        <div style={{ fontSize: 13, color: '#475569', marginBottom: 20 }}>{c.department_name}</div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: getSectorColor(c.sector_tags) }}>
-                            {fmt(c.budget_ceiling)}
-                          </span>
-                          <span style={{ fontSize: 13, color: '#475569' }}>{c.timeline_weeks}w</span>
+
+                        {/* Department */}
+                        <div style={{ fontSize: 13, color: '#64748B', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                          </svg>
+                          {c.department_name}
                         </div>
-                      </>
-                    ) : (
-                      <div style={{ height: 120, background: 'rgba(255,255,255,0.03)', borderRadius: 10, animation: 'pulse 2s infinite' }} />
-                    )}
-                  </div>
-                </TiltCard>
-              </Reveal>
-            ))}
+
+                        {/* Sector tags */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
+                          {(Array.isArray(c.sector_tags) ? c.sector_tags : String(c.sector_tags || '').split(',')).filter(Boolean).map(t => (
+                            <span key={t} style={{
+                              fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 100,
+                              background: `${getSectorColor(t)}25`, color: getSectorColor(t),
+                              border: `1px solid ${getSectorColor(t)}44`,
+                              textTransform: 'uppercase', letterSpacing: '0.04em',
+                            }}>
+                              {t.trim()}
+                            </span>
+                          ))}
+                        </div>
+
+                        {/* Budget + timeline row */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                          <div>
+                            <div style={{ fontSize: 10, color: '#475569', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 2 }}>Budget</div>
+                            <div style={{ fontSize: 15, fontWeight: 700, color: getSectorColor(c.sector_tags) }}>
+                              {fmt(c.budget_ceiling)}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: 10, color: '#475569', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 2 }}>Timeline</div>
+                            <div style={{ fontSize: 15, fontWeight: 700, color: '#94A3B8' }}>{c.timeline_weeks}w</div>
+                          </div>
+                        </div>
+                      </div>
+                    </TiltCard>
+                  </Reveal>
+                ))
+            }
           </div>
         </div>
       </div>
