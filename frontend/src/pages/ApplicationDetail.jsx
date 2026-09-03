@@ -94,8 +94,11 @@ export default function ApplicationDetail() {
     return Math.ceil((new Date(deadline) - new Date()) / 86400000);
   };
 
-  // Determine if solution should be redacted
-  const isOwnApplication = application?.startup === user.id || application?.startup_name === user.name;
+  // isOwnApplication: startup viewing their own — compare startup entity id to logged-in startup_id
+  const isOwnApplication = user.role === 'startup' && (
+    String(application?.startup) === String(user.startup_id) ||
+    application?.startup_name === user.name
+  );
   const shouldRedact = application && !isOwnApplication && !['shortlisted', 'contracted'].includes(application.status);
 
   if (loading) return <div className="p-6">Loading...</div>;
