@@ -273,7 +273,7 @@ export default function Landing() {
           {PARTICLES.map(p => <Particle key={p.id} {...p} />)}
         </div>
 
-        {/* Parallax background orbs */}
+        {/* Ambient orbs — much more vibrant */}
         <motion.div style={{ position: 'absolute', inset: 0, scale: meshScale, pointerEvents: 'none' }}>
           <motion.div
             animate={{ x: [0, 30, 0], y: [0, -20, 0], scale: [1, 1.1, 1] }}
@@ -281,8 +281,8 @@ export default function Landing() {
             style={{
               position: 'absolute', top: '5%', left: '5%',
               width: 600, height: 600, borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(255,153,51,0.18) 0%, transparent 60%)',
-              filter: 'blur(40px)',
+              background: 'radial-gradient(circle, rgba(255,100,0,0.45) 0%, rgba(255,153,51,0.25) 30%, transparent 65%)',
+              filter: 'blur(30px)',
             }}
           />
           <motion.div
@@ -291,18 +291,29 @@ export default function Landing() {
             style={{
               position: 'absolute', bottom: '5%', right: '5%',
               width: 500, height: 500, borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(19,136,8,0.18) 0%, transparent 60%)',
-              filter: 'blur(40px)',
+              background: 'radial-gradient(circle, rgba(19,200,8,0.40) 0%, rgba(19,136,8,0.22) 35%, transparent 65%)',
+              filter: 'blur(30px)',
             }}
           />
           <motion.div
             animate={{ x: [0, 20, 0], y: [0, 15, 0] }}
             transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 1.5 }}
             style={{
-              position: 'absolute', top: '40%', left: '40%',
-              width: 400, height: 400, borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(79,70,229,0.15) 0%, transparent 60%)',
-              filter: 'blur(40px)',
+              position: 'absolute', top: '35%', left: '35%',
+              width: 450, height: 450, borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(99,70,255,0.35) 0%, rgba(79,70,229,0.18) 40%, transparent 65%)',
+              filter: 'blur(30px)',
+            }}
+          />
+          {/* Extra punch — top-right cyan */}
+          <motion.div
+            animate={{ x: [0, -20, 0], y: [0, 20, 0] }}
+            transition={{ duration: 13, repeat: Infinity, ease: 'easeInOut', delay: 4 }}
+            style={{
+              position: 'absolute', top: '10%', right: '15%',
+              width: 300, height: 300, borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(0,200,255,0.30) 0%, transparent 65%)',
+              filter: 'blur(25px)',
             }}
           />
         </motion.div>
