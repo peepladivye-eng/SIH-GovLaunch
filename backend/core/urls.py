@@ -29,6 +29,7 @@ urlpatterns = [
     path('ai-provider-config/',                     ai_provider_config,    name='ai-provider-config'),
     path('health/',          health_view,           name='health'),
     path('stats/',           public_stats_view,     name='public-stats'),
+    path('challenges/public/', public_challenges_view, name='public-challenges'),
     path('admin/reset-demo/', reset_demo_view,      name='reset-demo'),
     path('', include(router.urls)),
 ]
