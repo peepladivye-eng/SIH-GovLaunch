@@ -104,11 +104,11 @@ export default function MyChallenges() {
       </motion.div>
 
       {/* Stats — all computed from actual fetched data */}
-      <div className="grid grid-cols-4 gap-4">
-        <StatCard icon={Target}   value={openCount}       label="Open Challenges"    color="teal"   />
-        <StatCard icon={Users}    value={totalApplicants} label="Total Applicants"   color="indigo" />
-        <StatCard icon={Clock}    value={pendingEval}     label="Pending Evaluation" color="amber"  />
-        <StatCard icon={FileCheck} value={contractedCount} label="Contracts Signed"  color="green"  />
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        <StatCard icon={Target}    value={openCount}        label="Open Challenges"    color="teal"   />
+        <StatCard icon={Users}     value={totalApplicants}  label="Total Applicants"   color="indigo" />
+        <StatCard icon={Clock}     value={pendingEval}      label="Pending Evaluation" color="amber"  />
+        <StatCard icon={FileCheck} value={contractedCount}  label="Contracts Signed"   color="green"  />
       </div>
 
       {/* Challenges Table */}
