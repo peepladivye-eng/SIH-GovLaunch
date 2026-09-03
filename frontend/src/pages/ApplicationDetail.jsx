@@ -44,14 +44,8 @@ export default function ApplicationDetail() {
       try {
         const app = await api.getApplication(id);
         setApplication(app);
-        // Fetch existing novelty check if present (department / evaluator only)
+        // Log view for department/evaluator — fire and forget, don't block
         if (['department', 'evaluator', 'admin'].includes(user.role)) {
-          try {
-            const nc = await api.runNoveltyCheck(id).catch(() => null);
-            // We don't want to auto-run — just check if one already exists via GET
-            // The API doesn't have a separate GET, so we leave noveltyCheck null until Run is clicked
-          } catch (_) {}
-          // Log view
           api.logApplicationView(id).catch(() => {});
         }
       } catch (err) {
