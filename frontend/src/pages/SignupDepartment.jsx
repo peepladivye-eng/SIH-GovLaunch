@@ -1,152 +1,178 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { ArrowRight, Building2 } from 'lucide-react';
+import { ArrowRight, Building2, Shield, Globe, Users } from 'lucide-react';
 import { api } from '../lib/api';
-import { Input } from '../components/ui/input';
-import { Button } from '../components/ui/button';
 import { useToast } from '../components/ui/toast';
+
+const FIELD_STYLE = {
+  width: '100%', height: 44, padding: '0 14px', borderRadius: 10,
+  border: '1.5px solid #E2E8F0', background: '#F8FAFC',
+  fontSize: 14, color: '#0F172A', outline: 'none', boxSizing: 'border-box',
+  fontFamily: "'Inter', sans-serif", transition: 'border-color 0.15s, box-shadow 0.15s',
+};
+
+function Field({ label, value, onChange, placeholder, type = 'text', required }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div>
+      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+        {label}
+      </label>
+      <input
+        type={type} value={value} onChange={onChange} placeholder={placeholder} required={required}
+        onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+        style={{
+          ...FIELD_STYLE,
+          borderColor: focused ? '#0D9488' : '#E2E8F0',
+          boxShadow: focused ? '0 0 0 3px rgba(13,148,136,0.12)' : 'none',
+        }}
+      />
+    </div>
+  );
+}
+
+const FEATURES = [
+  { icon: Shield,   text: 'Verified government access' },
+  { icon: Globe,    text: 'National innovation reach' },
+  { icon: Users,    text: '10+ departments onboarded' },
+];
 
 export default function SignupDepartment() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [formData, setFormData] = useState({
-    name: '',
-    ministry: '',
-    username: '',
-    password: ''
-  });
+  const [formData, setFormData] = useState({ name: '', ministry: '', username: '', password: '' });
   const [loading, setLoading] = useState(false);
+
+  const set = (key) => (e) => setFormData(p => ({ ...p, [key]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.signup({
-        username: formData.username,
-        password: formData.password,
-        name: formData.name,
-        role: 'department',
-        ministry: formData.ministry
-      });
+      await api.signup({ ...formData, role: 'department' });
       toast({ title: 'Account created!', description: 'Please log in to continue.' });
       navigate('/login');
     } catch (err) {
-      toast({
-        title: 'Registration failed',
-        description: err.response?.data?.detail || 'Please try again',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
-    }
+      let msg = 'Please try again';
+      try { msg = JSON.parse(err.message).detail || msg; } catch (_) {}
+      toast({ title: 'Registration failed', description: msg, variant: 'destructive' });
+    } finally { setLoading(false); }
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left - Form */}
-      <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-8">
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6 }}
-          className="w-full max-w-md"
-        >
-          <h2 className="text-2xl font-space-grotesk font-bold text-[--text-primary] mb-6">
-            Register your department
-          </h2>
+    <div style={{ minHeight: '100vh', display: 'flex', fontFamily: "'Inter', sans-serif" }}>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Department Name */}
-            <div>
-              <label className="block text-sm font-medium text-[--text-secondary] mb-1.5">
-                Department Name
-              </label>
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., Ministry of Health & Family Welfare"
-                required
-              />
+      {/* ── Left: Form ── */}
+      <div style={{ flex: 1, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 32px' }}>
+        <motion.div initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.55 }}
+          style={{ width: '100%', maxWidth: 440 }}>
+
+          {/* Logo */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 36 }}>
+            <div style={{ width: 20, height: 20, borderRadius: '50%',
+              background: 'conic-gradient(from 0deg, #FF9933 0deg 120deg, #ffffff 120deg 240deg, #138808 240deg 360deg)',
+              boxShadow: '0 0 10px rgba(13,148,136,0.4)',
+            }} />
+            <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, fontWeight: 800, color: '#0B0F19' }}>
+              GovLaunch
+            </span>
+          </div>
+
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#0D9488', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>
+              Government Portal
+            </div>
+            <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 28, fontWeight: 800, color: '#0B0F19', margin: 0, lineHeight: 1.2 }}>
+              Register your department
+            </h1>
+            <p style={{ fontSize: 14, color: '#64748B', marginTop: 8 }}>
+              Join GovLaunch to post challenges and discover innovative solutions.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <Field label="Department Name" value={formData.name} onChange={set('name')}
+              placeholder="e.g., Ministry of Health & Family Welfare" required />
+            <Field label="Ministry" value={formData.ministry} onChange={set('ministry')}
+              placeholder="e.g., Ministry of Health & Family Welfare" required />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <Field label="Username" value={formData.username} onChange={set('username')} placeholder="Choose username" required />
+              <Field label="Password" type="password" value={formData.password} onChange={set('password')} placeholder="Create password" required />
             </div>
 
-            {/* Ministry */}
-            <div>
-              <label className="block text-sm font-medium text-[--text-secondary] mb-1.5">
-                Ministry
-              </label>
-              <Input
-                value={formData.ministry}
-                onChange={(e) => setFormData({ ...formData, ministry: e.target.value })}
-                placeholder="e.g., Ministry of Health & Family Welfare"
-                required
-              />
-            </div>
-
-            {/* Username */}
-            <div>
-              <label className="block text-sm font-medium text-[--text-secondary] mb-1.5">
-                Username
-              </label>
-              <Input
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                placeholder="Choose a username"
-                required
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-[--text-secondary] mb-1.5">
-                Password
-              </label>
-              <Input
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="Create a password"
-                required
-              />
-            </div>
-
-            {/* Submit */}
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[--gov-accent] hover:bg-[--gov-accent-light] text-white"
+            <motion.button
+              type="submit" disabled={loading}
+              whileHover={{ scale: 1.01, boxShadow: '0 8px 24px rgba(13,148,136,0.35)' }}
+              whileTap={{ scale: 0.98 }}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                height: 48, borderRadius: 12, border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+                background: loading ? '#94A3B8' : 'linear-gradient(135deg, #0D9488, #0891B2)',
+                color: '#fff', fontWeight: 700, fontSize: 15,
+                boxShadow: '0 4px 16px rgba(13,148,136,0.3)', marginTop: 4,
+              }}
             >
-              {loading ? 'Creating Account...' : 'Create Department Account'}
-              <ArrowRight className="ml-2" size={18} />
-            </Button>
+              {loading ? 'Creating Account…' : 'Create Department Account'}
+              {!loading && <ArrowRight size={18} />}
+            </motion.button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-[--text-secondary]">
+          <p style={{ textAlign: 'center', fontSize: 13, color: '#94A3B8', marginTop: 24 }}>
             Already registered?{' '}
-            <Link to="/login" className="text-[--gov-accent] hover:underline font-medium">
-              Log in
-            </Link>
+            <Link to="/login" style={{ color: '#0D9488', fontWeight: 600, textDecoration: 'none' }}>Log in</Link>
           </p>
         </motion.div>
       </div>
 
-      {/* Right - Dark with quote */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[--bg] flex-col items-center justify-center p-12">
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6 }}
-          className="max-w-md text-center"
-        >
-          <div className="w-16 h-16 rounded-xl bg-[--gov-accent]/20 flex items-center justify-center mx-auto mb-6">
-            <Building2 className="text-[--gov-accent]" size={32} />
-          </div>
-          <blockquote className="text-2xl font-space-grotesk font-medium text-white mb-6">
+      {/* ── Right: Dark hero ── */}
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden',
+        background: 'linear-gradient(135deg, #0D1117 0%, #0A0E1A 60%, #0C1020 100%)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48 }}>
+
+        {/* Orbs */}
+        <motion.div animate={{ x: [0,20,0], y: [0,-20,0] }} transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ position: 'absolute', top: -60, right: -60, width: 300, height: 300, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(13,148,136,0.2) 0%, transparent 70%)', filter: 'blur(40px)' }} />
+        <motion.div animate={{ x: [0,-15,0], y: [0,20,0] }} transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
+          style={{ position: 'absolute', bottom: -40, left: -40, width: 250, height: 250, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(8,145,178,0.15) 0%, transparent 70%)', filter: 'blur(40px)' }} />
+
+        <motion.div initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 0.15 }}
+          style={{ position: 'relative', zIndex: 1, maxWidth: 380, textAlign: 'center' }}>
+
+          {/* Icon */}
+          <motion.div
+            animate={{ y: [0, -8, 0] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ width: 72, height: 72, borderRadius: 20, margin: '0 auto 28px',
+              background: 'linear-gradient(135deg, rgba(13,148,136,0.3), rgba(8,145,178,0.2))',
+              border: '1px solid rgba(13,148,136,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 8px 32px rgba(13,148,136,0.2)' }}
+          >
+            <Building2 size={34} color="#2DD4BF" />
+          </motion.div>
+
+          <blockquote style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 24, fontWeight: 700, color: '#F1F5F9', lineHeight: 1.4, marginBottom: 16 }}>
             "Post the outcome you need. Let merit find you the solution."
           </blockquote>
-          <p className="text-gray-400 text-sm">
+          <p style={{ fontSize: 14, color: '#475569', marginBottom: 36 }}>
             Join India's leading platform for government-startup collaboration.
           </p>
+
+          {/* Feature pills */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {FEATURES.map((f, i) => (
+              <motion.div key={i} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4 + i * 0.1 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 12,
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
+                  borderRadius: 10, padding: '10px 14px' }}>
+                <f.icon size={16} color="#2DD4BF" />
+                <span style={{ fontSize: 13, color: '#94A3B8' }}>{f.text}</span>
+              </motion.div>
+            ))}
+          </div>
         </motion.div>
       </div>
     </div>
