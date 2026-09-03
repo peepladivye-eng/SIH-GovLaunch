@@ -114,38 +114,39 @@ export default function MyChallenges() {
       {/* Challenges Table */}
       <Card className="rounded-xl border-[--border] shadow-sm">
         <div className="p-5 border-b border-[--border]">
-          <h2 className="font-semibold text-[--text-primary]">Your Challenges</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0B0F19', margin: 0 }}>Your Challenges</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-[--surface-alt]">
+            <thead style={{ background: '#F8FAFC' }}>
               <tr>
-                <th className="text-left p-4 text-sm font-medium text-[--text-secondary]">Challenge</th>
-                <th className="text-left p-4 text-sm font-medium text-[--text-secondary]">Status</th>
-                <th className="text-left p-4 text-sm font-medium text-[--text-secondary]">Budget</th>
-                <th className="text-left p-4 text-sm font-medium text-[--text-secondary]">Applicants</th>
-                <th className="text-left p-4 text-sm font-medium text-[--text-secondary]">Timeline</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Challenge</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Budget</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Applicants</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timeline</th>
               </tr>
             </thead>
             <tbody>
               {challenges.map((chal) => (
-                <tr
+                <motion.tr
                   key={chal.id}
-                  className="border-t border-[--border] cursor-pointer hover:bg-gray-50"
+                  whileHover={{ background: '#F8FAFC' }}
+                  style={{ borderTop: '1px solid #F1F5F9', cursor: 'pointer' }}
                   onClick={() => navigate(`/challenges/${chal.id}`)}
                 >
-                  <td className="p-4">
-                    <div className="font-medium text-[--text-primary]">{chal.title}</div>
+                  <td style={{ padding: '14px 16px' }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#0B0F19' }}>{chal.title}</div>
                   </td>
-                  <td className="p-4"><StatusBadge status={chal.status} /></td>
-                  <td className="p-4 text-[--text-secondary]">{formatCurrency(chal.budget_ceiling)}</td>
-                  <td className="p-4 text-[--text-secondary]">{chal.application_count ?? 0}</td>
-                  <td className="p-4 text-[--text-secondary]">{chal.timeline_weeks} weeks</td>
-                </tr>
+                  <td style={{ padding: '14px 16px' }}><StatusBadge status={chal.status} /></td>
+                  <td style={{ padding: '14px 16px', fontSize: 14, color: '#475569' }}>{formatCurrency(chal.budget_ceiling)}</td>
+                  <td style={{ padding: '14px 16px', fontSize: 14, color: '#475569' }}>{chal.application_count ?? 0}</td>
+                  <td style={{ padding: '14px 16px', fontSize: 14, color: '#475569' }}>{chal.timeline_weeks} weeks</td>
+                </motion.tr>
               ))}
               {challenges.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-[--text-secondary]">
+                  <td colSpan={5} style={{ padding: 32, textAlign: 'center', color: '#94A3B8', fontSize: 14 }}>
                     No challenges yet. Click "Post Challenge" to create one.
                   </td>
                 </tr>
