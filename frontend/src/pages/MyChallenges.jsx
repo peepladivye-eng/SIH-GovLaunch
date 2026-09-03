@@ -52,26 +52,56 @@ export default function MyChallenges() {
   const pendingEval      = applications.filter(a => a.status === 'under_evaluation').length;
   const contractedCount  = applications.filter(a => a.status === 'contracted').length;
 
-  if (loading) return <div className="p-6 text-[--text-secondary]">Loading…</div>;
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-space-grotesk font-bold text-[--text-primary]">
-            Welcome, {user.name}
-          </h1>
-          <p className="text-sm text-[--text-secondary]">{user.ministry}</p>
+    <div style={{ minHeight: '100vh' }}>
+      {/* ── Department Hero Header ── */}
+      <motion.div
+        initial={{ opacity: 0, y: -16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.55 }}
+        style={{
+          position: 'relative', overflow: 'hidden', borderRadius: 20, marginBottom: 24, padding: '28px 32px',
+          background: 'linear-gradient(135deg, #0D1117 0%, #0A0E1A 55%, #0C1020 100%)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
+        }}
+      >
+        {/* Ambient orbs */}
+        <motion.div animate={{ x: [0,18,0], y: [0,-14,0] }} transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ position: 'absolute', top: -50, left: -50, width: 260, height: 260, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(13,148,136,0.2) 0%, transparent 70%)', filter: 'blur(40px)', pointerEvents: 'none' }} />
+        <motion.div animate={{ x: [0,-14,0], y: [0,18,0] }} transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut', delay: 3 }}
+          style={{ position: 'absolute', bottom: -40, right: -40, width: 220, height: 220, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(8,145,178,0.15) 0%, transparent 70%)', filter: 'blur(40px)', pointerEvents: 'none' }} />
+
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#2DD4BF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>
+              Government Portal
+            </div>
+            <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 800, color: '#fff', margin: '0 0 4px' }}>
+              Welcome, {user.name}
+            </h1>
+            <p style={{ fontSize: 13, color: '#475569', margin: 0 }}>{user.ministry}</p>
+          </div>
+
+          <motion.button
+            onClick={() => navigate('/challenges/new')}
+            whileHover={{ scale: 1.03, boxShadow: '0 8px 24px rgba(13,148,136,0.4)' }}
+            whileTap={{ scale: 0.97 }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '12px 22px', borderRadius: 12, border: 'none', cursor: 'pointer',
+              background: 'linear-gradient(135deg, #0D9488, #0891B2)',
+              color: '#fff', fontWeight: 700, fontSize: 14,
+              boxShadow: '0 4px 16px rgba(13,148,136,0.3)',
+            }}
+          >
+            <Plus size={18} />
+            Post Challenge
+          </motion.button>
         </div>
-        <Button
-          onClick={() => navigate('/challenges/new')}
-          className="bg-[--gov-accent] hover:bg-[--gov-accent-light] text-white"
-        >
-          <Plus size={18} className="mr-2" />
-          Post Challenge
-        </Button>
-      </div>
+      </motion.div>
 
       {/* Stats — all computed from actual fetched data */}
       <div className="grid grid-cols-4 gap-4">
