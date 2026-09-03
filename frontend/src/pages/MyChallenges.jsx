@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { Plus, Target, Users, Clock, FileCheck } from 'lucide-react';
 import { api } from '../lib/api';
-import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import StatusBadge from '../components/StatusBadge';
 import StatCard from '../components/StatCard';
