@@ -180,13 +180,14 @@ def t_novelty_fake_key():
     assert 'error' in r.json(), f'No error field: {r.json()}'
 check('POST /api/applications/:id/novelty-check/ (fake key → 502)', t_novelty_fake_key)
 
-# ── Switch to evaluator ──────────────────────────────────────────────────────
+# ── Switch to evaluator — fresh session to avoid cookie contamination ─────────
 s.post(f'{BASE}/auth/logout/')
-s.post(f'{BASE}/auth/login/', json={'username': 'evaluator1', 'password': 'demo1234'})
+s_eval = requests.Session()
+s_eval.post(f'{BASE}/auth/login/', json={'username': 'evaluator1', 'password': 'demo1234'})
 
 # ── 16. Evaluator sees only under_evaluation ────────────────────────────────
 def t_apps_evaluator():
-    r = s.get(f'{BASE}/applications/')
+    r = s_eval.get(f'{BASE}/applications/')
     assert r.status_code == 200, r.text
     lst = r.json() if isinstance(r.json(), list) else r.json().get('results', [])
     bad = [a['status'] for a in lst if a['status'] != 'under_evaluation']
