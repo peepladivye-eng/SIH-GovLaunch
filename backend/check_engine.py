@@ -102,7 +102,10 @@ s.post(f'{BASE}/auth/logout/')
 
 # ── 9. Login — department ────────────────────────────────────────────────────
 def t_login_dept():
-    r = s.post(f'{BASE}/auth/login/', json={'username': 'health.dept', 'password': 'demo1234'})
+    # FIX 2: send X-CSRFToken on department login just like every other POST
+    csrf = s.cookies.get('csrftoken', '')
+    r = s.post(f'{BASE}/auth/login/', json={'username': 'health.dept', 'password': 'demo1234'},
+               headers={'X-CSRFToken': csrf})
     assert r.status_code == 200, r.text
     assert r.json()['role'] == 'department'
 check('POST /api/auth/login/ (department)', t_login_dept)
