@@ -1,6 +1,6 @@
-from django.db.models.signals import pre_save
+from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
-from .models import Application, Challenge, AuditLog
+from .models import Application, Challenge, AuditLog, Startup
 
 
 @receiver(pre_save, sender=Application)
@@ -31,3 +31,11 @@ def log_challenge_status_change(sender, instance, **kwargs):
                 )
         except Challenge.DoesNotExist:
             pass
+
+
+@receiver(post_save, sender=Startup)
+def award_dpiit_verified_badge(sender, instance, **kwargs):
+    """Award dpiit_verified badge whenever a startup is saved with dpiit_recognized status."""
+    if instance.registration_status == "dpiit_recognized":
+        from .badges import award_badge
+        award_badge(instance, "dpiit_verified")
