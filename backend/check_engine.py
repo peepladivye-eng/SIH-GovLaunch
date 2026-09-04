@@ -74,8 +74,13 @@ check('GET /api/applications/ (startup scoped)', t_apps_startup)
 # ── 7. Submit application ────────────────────────────────────────────────────
 def t_submit_app():
     csrf = s.cookies.get('csrftoken', '')
+    # FIX 3: fetch real challenge id dynamically — autoincrement grows across reseeds
+    open_chals = s.get(f'{BASE}/challenges/').json()
+    open_chals = open_chals if isinstance(open_chals, list) else open_chals.get('results', [])
+    assert len(open_chals) > 0, 'No open challenges visible to startup'
+    real_challenge_id = open_chals[0]['id']
     r = s.post(f'{BASE}/applications/', json={
-        'challenge': 1,
+        'challenge': real_challenge_id,
         'solution_brief': 'Automated engine check test submission',
         'proposed_timeline': 8,
         'budget_quote': 500000,
