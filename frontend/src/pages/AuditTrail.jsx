@@ -44,6 +44,8 @@ function StatPill({ icon: Icon, value, label, accent }) {
 }
 
 export default function AuditTrail() {
+  // F2 test: verify ErrorBoundary catches render errors
+  // if (true) throw new Error('ErrorBoundary test — remove me');
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
