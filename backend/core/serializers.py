@@ -30,6 +30,7 @@ class ChallengeSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Challenge
         fields = '__all__'
+        read_only_fields = ['department']
 
     def get_application_count(self, obj):
         return obj.application_set.count()
