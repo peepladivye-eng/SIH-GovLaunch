@@ -170,6 +170,7 @@ const isNew = (d) => d && (Date.now() - new Date(d)) < 7 * 86400000;
 
 export default function Landing() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const containerRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: containerRef, offset: ['start start', 'end end'] });
 
