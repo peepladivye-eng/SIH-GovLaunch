@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import LanguageSwitcher from './LanguageSwitcher';
 
 // Icon components for navigation
 const ChevronRightIcon = () => (
