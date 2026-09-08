@@ -261,7 +261,7 @@ export default function Landing() {
           <LanguageSwitcher variant="landing" />
           <MagneticButton onClick={() => navigate('/login')}
             style={{ background: 'none', border: 'none', color: '#94A3B8', fontSize: 14, fontWeight: 500, padding: '8px 16px', borderRadius: 8 }}>
-            Log In
+            {t('landing.cta.login')}
           </MagneticButton>
           <MagneticButton onClick={() => navigate('/login')}
             style={{
