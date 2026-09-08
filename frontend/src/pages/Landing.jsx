@@ -233,7 +233,7 @@ export default function Landing() {
             }}
           />
           <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>
-            GovLaunch
+            {t('landing.brand')}
           </span>
         </div>
 
