@@ -103,11 +103,12 @@ export const translations = {
     'status.shortlisted': 'शॉर्टलिस्ट',
     'status.contracted': 'अनुबंधित',
     
-    // Landing page
+    // Landing page (Hindi)
     'landing.hero.title': 'सरकारी नवाचार खरीद',
     'landing.hero.subtitle': 'भारतीय स्टार्टअप्स को परिणाम-आधारित पायलट अनुबंधों के लिए सरकारी विभागों से जोड़ना',
     'landing.cta.login': 'लॉगिन',
     'landing.cta.signup': 'स्टार्टअप के रूप में शामिल हों',
+    'landing.cta.govt': 'सरकारी लॉगिन',
     'landing.stats.challenges': 'खुली चुनौतियाँ',
     'landing.stats.startups': 'पंजीकृत स्टार्टअप',
     'landing.stats.pilots': 'स्केल किए गए पायलट',
