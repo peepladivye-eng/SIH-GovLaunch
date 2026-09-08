@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { LanguageProvider } from './contexts/LanguageContext';
 
 // Layouts
 import AppSidebar from './components/AppSidebar';
