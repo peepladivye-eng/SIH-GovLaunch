@@ -4,7 +4,7 @@ import { motion, useSpring, useInView } from 'motion/react';
 import { AlertCircle, Building2, IndianRupee, Clock, FileText, ArrowRight, CheckCircle } from 'lucide-react';
 import { api } from '../lib/api';
 import TierBadge from '../components/TierBadge';
-
+import Reveal from '../components/Reveal';
 const STAGES = [
   { key: 'submitted',       label: 'Submitted',       color: '#94A3B8' },
   { key: 'screening',       label: 'Screening',       color: '#818CF8' },
@@ -44,18 +44,6 @@ function TiltCard({ children, style, onClick }) {
       whileHover={{ scale: 1.01, boxShadow: '0 12px 36px rgba(0,0,0,0.1)' }}
       transition={{ type: 'spring', stiffness: 300, damping: 28 }}
     >
-      {children}
-    </motion.div>
-  );
-}
-
-function Reveal({ children, delay = 0 }) {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: '-40px' });
-  return (
-    <motion.div ref={ref} initial={{ opacity: 0, y: 18 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.45, delay, ease: [0.25, 0.46, 0.45, 0.94] }}>
       {children}
     </motion.div>
   );
@@ -152,8 +140,7 @@ export default function MyApplications() {
       {/* ── Application cards ── */}
       {!loading && applications.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {applications.map((app, i) => {
-            const stageIdx    = getStageIdx(app.status);
+          {applications.map((app, i) => {            const stageIdx    = getStageIdx(app.status);
             const normStatus  = String(app.status || '').toLowerCase();
             const isRejected  = normStatus === 'rejected' || normStatus === 'ineligible';
             const isWon       = normStatus === 'contracted';
@@ -162,7 +149,7 @@ export default function MyApplications() {
             const brief       = app.solution_brief?.slice(0, 110) + (app.solution_brief?.length > 110 ? '…' : '');
 
             return (
-              <Reveal key={app.id || i} delay={i * 0.06}>
+              <Reveal key={app.id || i} delay={i * 0.06} direction="up">
                 <TiltCard
                   onClick={() => navigate(`/applications/${app.id}`)}
                   style={{ borderRadius: 16, background: '#fff', border: isWon ? '1px solid #A7F3D0' : isRejected ? '1px solid #FECACA' : '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Plus, Target, Users, Clock, FileCheck } from 'lucide-react';
+import { Plus, Target, Users, Clock, FileCheck, Globe, Lock } from 'lucide-react';
 import { api } from '../lib/api';
 import { Card } from '../components/ui/card';
 import StatusBadge from '../components/StatusBadge';
 import StatCard from '../components/StatCard';
+import Reveal, { StaggerReveal } from '../components/Reveal';
 
 export default function MyChallenges() {
   const navigate = useNavigate();
@@ -13,31 +14,43 @@ export default function MyChallenges() {
   const [challenges, setChallenges] = useState([]);
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [publishing, setPublishing] = useState(null); // id of challenge being toggled
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // The viewset already scopes challenges to this department — no client filter needed
-        const [chals, apps] = await Promise.all([
-          api.getChallenges(),
-          api.getApplications(),
-        ]);
+  const fetchData = async () => {
+    try {
+      const [chals, apps] = await Promise.all([
+        api.getChallenges(),
+        api.getApplications(),
+      ]);
+      const chalList = Array.isArray(chals) ? chals
+        : Array.isArray(chals?.results) ? chals.results : [];
+      const appList = Array.isArray(apps) ? apps
+        : Array.isArray(apps?.results) ? apps.results : [];
+      setChallenges(chalList);
+      setApplications(appList);
+    } catch (err) {
+      console.error('MyChallenges fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        const chalList = Array.isArray(chals) ? chals
-          : Array.isArray(chals?.results) ? chals.results : [];
-        const appList = Array.isArray(apps) ? apps
-          : Array.isArray(apps?.results) ? apps.results : [];
+  useEffect(() => { fetchData(); }, []);
 
-        setChallenges(chalList);
-        setApplications(appList);
-      } catch (err) {
-        console.error('MyChallenges fetch error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  // Toggle a challenge between draft ↔ open
+  const handleToggleStatus = async (e, chal) => {
+    e.stopPropagation(); // don't navigate to detail
+    const newStatus = chal.status === 'open' ? 'closed' : 'open';
+    setPublishing(chal.id);
+    try {
+      await api.updateChallenge(chal.id, { status: newStatus });
+      await fetchData(); // refresh list + stats
+    } catch (err) {
+      console.error('Status toggle failed:', err);
+    } finally {
+      setPublishing(null);
+    }
+  };
 
   const formatCurrency = (amount) => {
     if (!amount) return 'N/A';
@@ -47,10 +60,10 @@ export default function MyChallenges() {
   };
 
   // Stats derived from loaded data
-  const openCount        = challenges.filter(c => c.status === 'open').length;
-  const totalApplicants  = challenges.reduce((acc, c) => acc + (c.application_count || 0), 0);
-  const pendingEval      = applications.filter(a => a.status === 'under_evaluation').length;
-  const contractedCount  = applications.filter(a => a.status === 'contracted').length;
+  const openCount       = challenges.filter(c => c.status === 'open').length;
+  const totalApplicants = challenges.reduce((acc, c) => acc + (c.application_count || 0), 0);
+  const pendingEval     = applications.filter(a => a.status === 'under_evaluation').length;
+  const contractedCount = applications.filter(a => a.status === 'contracted').length;
 
   return (
     <div style={{ minHeight: '100vh' }}>
@@ -104,15 +117,20 @@ export default function MyChallenges() {
       </motion.div>
 
       {/* Stats — all computed from actual fetched data */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <StatCard icon={Target}    value={openCount}        label="Open Challenges"    color="teal"   />
-        <StatCard icon={Users}     value={totalApplicants}  label="Total Applicants"   color="indigo" />
-        <StatCard icon={Clock}     value={pendingEval}      label="Pending Evaluation" color="amber"  />
-        <StatCard icon={FileCheck} value={contractedCount}  label="Contracts Signed"   color="green"  />
-      </div>
+      <StaggerReveal stagger={0.08} direction="up" className="grid grid-cols-4 gap-4 mb-6">
+        <StatCard icon={Target}    value={openCount}       label="Open Challenges"    color="teal"
+          hint={openCount === 0 && challenges.filter(c => c.status === 'draft').length > 0
+            ? `${challenges.filter(c=>c.status==='draft').length} draft${challenges.filter(c=>c.status==='draft').length>1?'s':''} — click Publish ↓`
+            : null}
+        />
+        <StatCard icon={Users}     value={totalApplicants} label="Total Applicants"   color="indigo" />
+        <StatCard icon={Clock}     value={pendingEval}     label="Pending Evaluation" color="amber"  />
+        <StatCard icon={FileCheck} value={contractedCount} label="Contracts Signed"   color="green"  />
+      </StaggerReveal>
 
       {/* Challenges Table */}
-      <Card className="rounded-xl border-[--border] shadow-sm">
+      <Reveal direction="up" delay={0.15}>
+        <Card className="rounded-xl border-[--border] shadow-sm">
         <div className="p-5 border-b border-[--border]">
           <h2 style={{ fontSize: 16, fontWeight: 700, color: '#0B0F19', margin: 0 }}>Your Challenges</h2>
         </div>
@@ -125,6 +143,7 @@ export default function MyChallenges() {
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Budget</th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Applicants</th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timeline</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: 12, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -142,11 +161,40 @@ export default function MyChallenges() {
                   <td style={{ padding: '14px 16px', fontSize: 14, color: '#475569' }}>{formatCurrency(chal.budget_ceiling)}</td>
                   <td style={{ padding: '14px 16px', fontSize: 14, color: '#475569' }}>{chal.application_count ?? 0}</td>
                   <td style={{ padding: '14px 16px', fontSize: 14, color: '#475569' }}>{chal.timeline_weeks} weeks</td>
+                  <td style={{ padding: '14px 16px' }}>
+                    {/* Draft → Publish | Open → Close */}
+                    {chal.status !== 'contracted' && (
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        disabled={publishing === chal.id}
+                        onClick={(e) => handleToggleStatus(e, chal)}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5,
+                          padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                          fontSize: 12, fontWeight: 700,
+                          background: chal.status === 'open'
+                            ? '#FEF3C7' : '#ECFDF5',
+                          color: chal.status === 'open'
+                            ? '#D97706' : '#059669',
+                          opacity: publishing === chal.id ? 0.6 : 1,
+                        }}
+                      >
+                        {publishing === chal.id ? (
+                          '…'
+                        ) : chal.status === 'open' ? (
+                          <><Lock size={11} /> Close</>
+                        ) : (
+                          <><Globe size={11} /> Publish</>
+                        )}
+                      </motion.button>
+                    )}
+                  </td>
                 </motion.tr>
               ))}
               {challenges.length === 0 && (
                 <tr>
-                  <td colSpan={5} style={{ padding: 32, textAlign: 'center', color: '#94A3B8', fontSize: 14 }}>
+                  <td colSpan={6} style={{ padding: 32, textAlign: 'center', color: '#94A3B8', fontSize: 14 }}>
                     No challenges yet. Click "Post Challenge" to create one.
                   </td>
                 </tr>
@@ -155,6 +203,7 @@ export default function MyChallenges() {
           </table>
         </div>
       </Card>
+      </Reveal>
     </div>
   );
 }

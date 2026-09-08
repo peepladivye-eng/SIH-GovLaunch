@@ -3,6 +3,7 @@ import { motion, useSpring, useInView } from 'motion/react';
 import { TrendingUp, Building2, CheckCircle, Zap, ArrowRight } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../components/ui/toast';
+import Reveal from '../components/Reveal';
 
 // 3D tilt
 function TiltCard({ children, style, onClick }) {
@@ -23,18 +24,6 @@ function TiltCard({ children, style, onClick }) {
       whileHover={{ scale: 1.02, boxShadow: '0 16px 48px rgba(0,0,0,0.1)' }}
       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
     >
-      {children}
-    </motion.div>
-  );
-}
-
-function Reveal({ children, delay = 0 }) {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: '-40px' });
-  return (
-    <motion.div ref={ref} initial={{ opacity: 0, y: 20 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.45, delay, ease: [0.25, 0.46, 0.45, 0.94] }}>
       {children}
     </motion.div>
   );
@@ -62,7 +51,6 @@ export default function ScaleUpCatalog() {
       toast({ title: 'Error', description: 'Failed to adopt pilot', variant: 'destructive' });
     }
   };
-
   if (loading) return <div style={{ padding: 24, color: '#94A3B8', fontSize: 14 }}>Loading…</div>;
 
   return (
@@ -104,7 +92,12 @@ export default function ScaleUpCatalog() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
           {entries.map((entry, i) => {
-            const adopted = entry.adopted_count > 0 || entry.has_adopted || justAdopted[entry.id];
+            // Check if current user's dept is already in adopting_departments
+            const deptNames = (entry.adopting_departments || []).map(d =>
+              typeof d === 'object' ? d.name : d
+            );
+            const alreadyAdopted = deptNames.includes(user.name) || justAdopted[entry.id];
+            const adopted = (entry.adopted_count > 0) || alreadyAdopted;
             return (
               <Reveal key={entry.id} delay={i * 0.07}>
                 <TiltCard style={{
@@ -195,7 +188,7 @@ export default function ScaleUpCatalog() {
                       </span>
 
                       {user.role === 'department' && (
-                        entry.has_adopted ? (
+                        alreadyAdopted ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#059669', fontWeight: 600 }}>
                             <CheckCircle size={15} />
                             Adopted

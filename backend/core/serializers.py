@@ -42,11 +42,21 @@ class ApplicationSerializer(serializers.ModelSerializer):
     department_name               = serializers.CharField(source='challenge.department.name', read_only=True)
     startup_registration_status   = serializers.CharField(source='startup.registration_status', read_only=True)
     startup_rating                = serializers.IntegerField(source='startup.rating', read_only=True)
+    startup_sector_tags           = serializers.JSONField(source='startup.sector_tags', read_only=True)
+    average_score                 = serializers.SerializerMethodField(read_only=True)
+    challenge_eligibility_rules   = serializers.JSONField(source='challenge.eligibility_rules', read_only=True)
 
     class Meta:
         model             = Application
         fields            = '__all__'
-        read_only_fields  = ['startup', 'status', 'created_at', 'content_hash']
+        read_only_fields  = ['startup', 'created_at', 'content_hash']
+
+    def get_average_score(self, obj):
+        evals = obj.evaluation_set.filter(conflict_of_interest=False)
+        if not evals.exists():
+            return None
+        scores = [e.total_score for e in evals]
+        return round(sum(scores) / len(scores), 1)
 
     def create(self, validated_data):
         import hashlib
@@ -84,6 +94,7 @@ class ContractSerializer(serializers.ModelSerializer):
 
 class ScaleUpEntrySerializer(serializers.ModelSerializer):
     adopting_departments = serializers.JSONField()
+
     class Meta:
         model  = ScaleUpEntry
         fields = '__all__'

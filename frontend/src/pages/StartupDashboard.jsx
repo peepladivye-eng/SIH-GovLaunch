@@ -10,6 +10,7 @@ import BadgeIcon, { RatingTierBadge } from '../components/BadgeIcon';
 import { getRatingTier, RATING_TIERS } from '../lib/ratingTiers';
 import { BADGE_CATALOG } from '../lib/badgeCatalog';
 import { NumberTicker } from '../components/NumberTicker';
+import Reveal, { StaggerReveal } from '../components/Reveal';
 
 // ── 3D Tilt stat card ─────────────────────────────────────────────────────────
 function Stat3DCard({ icon: Icon, value, label, color, accentColor, index }) {
@@ -83,23 +84,6 @@ function Stat3DCard({ icon: Icon, value, label, color, accentColor, index }) {
           transformOrigin: 'left', borderRadius: '0 0 16px 16px',
         }}
       />
-    </motion.div>
-  );
-}
-
-// Scroll reveal
-function Reveal({ children, delay = 0, direction = 'up' }) {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: '-60px' });
-  const dirs = {
-    up:    { hidden: { opacity: 0, y: 40 },   visible: { opacity: 1, y: 0 } },
-    left:  { hidden: { opacity: 0, x: -40 },  visible: { opacity: 1, x: 0 } },
-    scale: { hidden: { opacity: 0, scale: 0.9 }, visible: { opacity: 1, scale: 1 } },
-  };
-  return (
-    <motion.div ref={ref} initial="hidden" animate={inView ? 'visible' : 'hidden'}
-      variants={dirs[direction]} transition={{ duration: 0.6, delay, ease: [0.25, 0.46, 0.45, 0.94] }}>
-      {children}
     </motion.div>
   );
 }
@@ -186,6 +170,7 @@ export default function StartupDashboard() {
 
   // Stats
   const activeStatuses = ['submitted', 'screening', 'eligible', 'under_evaluation'];
+  const activeApps  = applications.filter(a => activeStatuses.includes(a.status)).length;
   const qualified   = badges.filter(b => b.badge_key === 'round1_qualifier' || b.badge_key === 'round2_qualifier').length;
   const prototypes  = applications.filter(a => a.prototype_start_date).length;
   const contracted  = applications.filter(a => a.status === 'contracted').length;
@@ -335,10 +320,66 @@ export default function StartupDashboard() {
           <div className="space-y-6">
             <div className="grid grid-cols-4 gap-4">
               <Stat3DCard icon={FileText}    value={applications.length} label="Applications"    accentColor="#4F46E5" index={0} />
-              <Stat3DCard icon={Star}        value={qualified}            label="Qualified"        accentColor="#D97706" index={1} />
-              <Stat3DCard icon={CheckCircle} value={prototypes}           label="Prototypes Built" accentColor="#0D9488" index={2} />
-              <Stat3DCard icon={CheckCircle} value={contracted}           label="Contracts Won"    accentColor="#16A34A" index={3} />
+              <Stat3DCard icon={Activity}    value={activeApps}          label="Active"          accentColor="#818CF8" index={1} />
+              <Stat3DCard icon={Star}        value={qualified}           label="Qualified"        accentColor="#D97706" index={2} />
+              <Stat3DCard icon={CheckCircle} value={contracted}          label="Contracts Won"    accentColor="#16A34A" index={3} />
             </div>
+            {/* Recent applications */}
+            {applications.length > 0 && (
+              <div>
+                <Reveal direction="up" delay={0.05}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <h2 className="text-lg font-semibold text-[--text-primary]">My Applications</h2>
+                    <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                      onClick={() => navigate('/my-applications')}
+                      style={{ fontSize: 13, fontWeight: 600, color: '#4F46E5', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                      View All →
+                    </motion.button>
+                  </div>
+                </Reveal>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {applications.slice(0, 5).map((app, i) => {
+                    const STATUS_COLORS = {
+                      submitted: { bg: '#EEF2FF', text: '#4F46E5' },
+                      screening: { bg: '#EDE9FE', text: '#6D28D9' },
+                      eligible: { bg: '#ECFDF5', text: '#059669' },
+                      under_evaluation: { bg: '#FEF3C7', text: '#D97706' },
+                      shortlisted: { bg: '#D1FAE5', text: '#047857' },
+                      contracted: { bg: '#D1FAE5', text: '#065F46' },
+                      rejected: { bg: '#FEE2E2', text: '#DC2626' },
+                      ineligible: { bg: '#F1F5F9', text: '#64748B' },
+                    };
+                    const sc = STATUS_COLORS[app.status] ?? STATUS_COLORS.submitted;
+                    return (
+                      <Reveal key={app.id} direction="up" delay={0.08 + i * 0.05}>
+                        <motion.div
+                          onClick={() => navigate(`/applications/${app.id}`)}
+                          whileHover={{ scale: 1.01, boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
+                          style={{
+                            background: '#fff', borderRadius: 12, border: '1px solid #E2E8F0',
+                            padding: '14px 18px', cursor: 'pointer', display: 'flex',
+                            alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                            boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                          }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 14, fontWeight: 600, color: '#0B0F19', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {app.challenge_title || `Challenge #${app.challenge}`}
+                            </div>
+                            <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
+                              {app.department_name || ''} · {app.created_at ? new Date(app.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}
+                            </div>
+                          </div>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 100, background: sc.bg, color: sc.text, flexShrink: 0 }}>
+                            {app.status?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                          </span>
+                        </motion.div>
+                      </Reveal>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Recommended challenges */}
             {challenges.length > 0 && (
               <div>
@@ -363,37 +404,118 @@ export default function StartupDashboard() {
           </div>
         </TabsContent>
 
-        {/* Applications performance table */}
+        {/* Applications tab — shows actual submitted applications */}
         <TabsContent value="applications">
-          <Card className="rounded-xl border-[--border] shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-[--surface-alt]">
-                  <tr>
-                    <th className="text-left p-4 text-[--text-secondary] font-medium">Challenge</th>
-                    <th className="text-left p-4 text-[--text-secondary] font-medium">Round</th>
-                    <th className="text-left p-4 text-[--text-secondary] font-medium">Score</th>
-                    <th className="text-left p-4 text-[--text-secondary] font-medium">Status</th>
-                    <th className="text-left p-4 text-[--text-secondary] font-medium">Rating Change</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ratingHistory.map(rh => (
-                    <tr key={rh.id} className="border-t border-[--border]">
-                      <td className="p-4 font-medium text-[--text-primary]">{rh.challenge_title || `App #${rh.application}`}</td>
-                      <td className="p-4 text-[--text-secondary]">{rh.round === 'round1_application' ? 'Round 1' : 'Round 2'}</td>
-                      <td className="p-4 text-[--text-primary]">{rh.score}/50</td>
-                      <td className="p-4 text-[--text-secondary]">—</td>
-                      <td className="p-4 text-green-600 font-semibold">+{rh.delta}</td>
-                    </tr>
-                  ))}
-                  {ratingHistory.length === 0 && (
-                    <tr><td colSpan={5} className="p-8 text-center text-[--text-secondary]">No rating history yet.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {applications.length === 0 ? (
+              <Card className="rounded-xl border-[--border] shadow-sm">
+                <div style={{ padding: '48px 24px', textAlign: 'center' }}>
+                  <FileText size={32} style={{ color: '#CBD5E1', margin: '0 auto 12px' }} />
+                  <p style={{ fontSize: 14, color: '#94A3B8', marginBottom: 16 }}>No applications yet.</p>
+                  <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                    onClick={() => navigate('/discover')}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#4F46E5,#7C3AED)', color: '#fff', fontWeight: 600, fontSize: 13 }}>
+                    Browse Challenges
+                  </motion.button>
+                </div>
+              </Card>
+            ) : (
+              <>
+                {/* Quick view cards */}
+                {applications.map((app, i) => {
+                  const STATUS_COLORS = {
+                    submitted: { bg: '#EEF2FF', text: '#4F46E5' },
+                    screening: { bg: '#EDE9FE', text: '#6D28D9' },
+                    eligible: { bg: '#ECFDF5', text: '#059669' },
+                    under_evaluation: { bg: '#FEF3C7', text: '#D97706' },
+                    shortlisted: { bg: '#D1FAE5', text: '#047857' },
+                    contracted: { bg: '#D1FAE5', text: '#065F46' },
+                    rejected: { bg: '#FEE2E2', text: '#DC2626' },
+                    ineligible: { bg: '#F1F5F9', text: '#64748B' },
+                  };
+                  const sc = STATUS_COLORS[app.status] ?? STATUS_COLORS.submitted;
+                  return (
+                    <motion.div key={app.id}
+                      initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.35, delay: i * 0.06 }}
+                      onClick={() => navigate(`/applications/${app.id}`)}
+                      whileHover={{ scale: 1.01, boxShadow: '0 6px 24px rgba(0,0,0,0.09)' }}
+                      style={{
+                        background: '#fff', borderRadius: 14, border: '1px solid #E2E8F0',
+                        padding: '16px 20px', cursor: 'pointer', display: 'flex',
+                        alignItems: 'center', justifyContent: 'space-between', gap: 16,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                      }}>
+                      {/* Left */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#0B0F19', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {app.challenge_title || `Challenge #${app.challenge}`}
+                        </div>
+                        <div style={{ fontSize: 12, color: '#64748B' }}>
+                          {app.department_name || ''}
+                        </div>
+                        {app.average_score != null && (
+                          <div style={{ marginTop: 6 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 100,
+                              background: app.average_score >= 35 ? '#D1FAE5' : app.average_score >= 25 ? '#FEF3C7' : '#FEE2E2',
+                              color: app.average_score >= 35 ? '#059669' : app.average_score >= 25 ? '#D97706' : '#DC2626' }}>
+                              Score: {app.average_score}/50
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {/* Right */}
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 100, background: sc.bg, color: sc.text }}>
+                          {app.status?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                        </span>
+                        <span style={{ fontSize: 11, color: '#94A3B8' }}>
+                          {app.created_at ? new Date(app.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
+                        </span>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+                {/* Link to full page */}
+                <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                  onClick={() => navigate('/my-applications')}
+                  style={{ width: '100%', padding: '12px', borderRadius: 12, border: '1.5px dashed #E2E8F0', background: '#F8FAFC', color: '#64748B', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  View All Applications with Full Details →
+                </motion.button>
+
+                {/* Rating history table below if any */}
+                {ratingHistory.length > 0 && (
+                  <Card className="rounded-xl border-[--border] shadow-sm" style={{ marginTop: 8 }}>
+                    <div style={{ padding: '14px 20px 10px', fontSize: 13, fontWeight: 700, color: '#0B0F19', borderBottom: '1px solid #F1F5F9' }}>
+                      Rating History
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-[--surface-alt]">
+                          <tr>
+                            <th className="text-left p-3 text-[--text-secondary] font-medium">Challenge</th>
+                            <th className="text-left p-3 text-[--text-secondary] font-medium">Round</th>
+                            <th className="text-left p-3 text-[--text-secondary] font-medium">Score</th>
+                            <th className="text-left p-3 text-[--text-secondary] font-medium">Rating Δ</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {ratingHistory.map(rh => (
+                            <tr key={rh.id} className="border-t border-[--border]">
+                              <td className="p-3 font-medium text-[--text-primary]">{rh.challenge_title || `App #${rh.application}`}</td>
+                              <td className="p-3 text-[--text-secondary]">{rh.round === 'round1_application' ? 'Round 1' : 'Round 2'}</td>
+                              <td className="p-3 text-[--text-primary]">{rh.score}/50</td>
+                              <td className="p-3 text-green-600 font-semibold">+{rh.delta}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </Card>
+                )}
+              </>
+            )}
+          </div>
         </TabsContent>
 
         {/* Awards & Badges */}

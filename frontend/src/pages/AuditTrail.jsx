@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, useInView } from 'motion/react';
 import { Shield, Clock, User, Activity, Search, Filter } from 'lucide-react';
 import { api } from '../lib/api';
+import Reveal, { StaggerReveal } from '../components/Reveal';
 
 const ACTION_COLORS = {
   'Submitted application':   { bg: '#EEF2FF', text: '#4F46E5', dot: '#4F46E5' },
@@ -96,14 +97,15 @@ export default function AuditTrail() {
       </motion.div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 28 }}>
+      <StaggerReveal stagger={0.07} direction="scale" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 28 }}>
         <StatPill icon={Activity} value={logs.length}   label="Total Events"    accent="#4F46E5" />
         <StatPill icon={User}     value={uniqueActors}   label="Active Users"    accent="#0D9488" />
         <StatPill icon={Clock}    value={recent24h}      label="Last 24h Events" accent="#D97706" />
         <StatPill icon={Shield}   value={uniqueActions}  label="Action Types"    accent="#DC2626" />
-      </div>
+      </StaggerReveal>
 
       {/* Log panel */}
+      <Reveal direction="up" delay={0.15}>
       <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
         {/* Search bar */}
         <div style={{ padding: '14px 20px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -171,6 +173,7 @@ export default function AuditTrail() {
           )}
         </div>
       </div>
+      </Reveal>
     </div>
   );
 }

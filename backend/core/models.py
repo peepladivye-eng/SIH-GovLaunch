@@ -131,6 +131,8 @@ class ScaleUpEntry(models.Model):
     originating_department_name = models.CharField(max_length=200)
     outcome_summary = models.TextField()
     adopting_departments = models.JSONField(default=list)
+    # adopted_count tracks how many departments have adopted this pilot
+    adopted_count = models.IntegerField(default=0)
 
 
 class AuditLog(models.Model):

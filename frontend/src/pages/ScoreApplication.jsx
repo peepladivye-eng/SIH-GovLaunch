@@ -6,6 +6,7 @@ import { api } from '../lib/api';
 import TierBadge from '../components/TierBadge';
 import ProofOfDisclosure from '../components/ProofOfDisclosure';
 import { useToast } from '../components/ui/toast';
+import Reveal, { StaggerReveal } from '../components/Reveal';
 
 const getCriteria = (round) => [
   { key: 'score_problem_solution_fit', label: 'Problem–Solution Fit',           desc: 'How well does the solution address the stated problem?' },

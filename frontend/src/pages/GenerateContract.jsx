@@ -6,6 +6,7 @@ import { api } from '../lib/api';
 import { useToast } from '../components/ui/toast';
 import TierBadge from '../components/TierBadge';
 import { ShimmerButton } from '../components/ShimmerButton';
+import Reveal, { StaggerReveal } from '../components/Reveal';
 
 // SVG progress ring
 function Ring({ pct, size = 40, color = '#0D9488' }) {
@@ -66,7 +67,8 @@ export default function GenerateContract() {
 
   const totalPct = milestones.reduce((s, m) => s + (parseInt(m.payment_percent) || 0), 0);
   const canSubmit = totalPct === 100 && milestones.every(m => m.description && m.due_weeks);
-  const requiresDpiit = application?.require_dpiit_recognition;
+  // Check the challenge's eligibility_rules for DPIIT requirement
+  const requiresDpiit = application?.challenge_eligibility_rules?.requires_dpiit || false;
   const isDpiit = application?.startup_registration_status === 'dpiit_recognized';
   const canGenerate = !requiresDpiit || isDpiit;
 
@@ -78,7 +80,15 @@ export default function GenerateContract() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await api.createContract({ application: id, milestones });
+      // Build the clause texts from the CLAUSES constant (displayed as read-only)
+      const clauseMap = Object.fromEntries(CLAUSES.map(c => [c.key, c.text]));
+      await api.createContract({
+        application: id,
+        milestones,
+        ip_clause_text: clauseMap.ip,
+        data_clause_text: clauseMap.data,
+        cybersecurity_checklist_text: clauseMap.cyber,
+      });
       setShowSuccess(true);
       setTimeout(() => navigate('/challenges'), 400);
     } catch (err) {
@@ -143,7 +153,8 @@ export default function GenerateContract() {
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Clauses */}
-        {CLAUSES.map((clause, i) => (
+        <StaggerReveal stagger={0.08} direction="up">
+          {CLAUSES.map((clause, i) => (
           <motion.div key={clause.key} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1, duration: 0.4 }}
             style={{ background: '#fff', borderRadius: 14, border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
             <div style={{ height: 3, background: 'linear-gradient(90deg, #0D9488, #0891B2)' }} />
@@ -159,9 +170,11 @@ export default function GenerateContract() {
               </p>
             </div>
           </motion.div>
-        ))}
+          ))}
+        </StaggerReveal>
 
         {/* Milestones */}
+        <Reveal direction="up" delay={0.1}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <h3 style={{ fontSize: 15, fontWeight: 700, color: '#0B0F19', margin: 0 }}>Milestone Schedule</h3>
@@ -193,6 +206,7 @@ export default function GenerateContract() {
             ))}
           </div>
         </div>
+        </Reveal>
 
         {/* Submit */}
         <ShimmerButton

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, useSpring } from 'motion/react';
-import { Search, Filter, IndianRupee, Clock, Building2, Target, Sparkles, ArrowRight } from 'lucide-react';
+import { Search, Filter, IndianRupee, Clock, Building2, Target, ArrowRight, RefreshCw } from 'lucide-react';
 import { api } from '../lib/api';
 
 const SECTOR_COLORS = {
@@ -56,18 +56,58 @@ export default function DiscoverChallenges() {
   const [challenges, setChallenges] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [newCount, setNewCount] = useState(0);       // how many challenges appeared since last visit
+  const prevIdsRef = useRef(new Set());
   const [filters, setFilters] = useState({ search: '', sector: 'All', department: 'All', minBudget: '', maxBudget: '' });
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const [chals, depts] = await Promise.all([api.getChallenges(), api.getDepartments()]);
-        setChallenges((Array.isArray(chals) ? chals : chals?.results ?? []).filter(c => c.status === 'open'));
-        setDepartments(Array.isArray(depts) ? depts : depts?.results ?? []);
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
-    })();
+  const [newIds, setNewIds] = useState(new Set());
+
+  const loadChallenges = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+    try {
+      const [chals, depts] = await Promise.all([api.getChallenges(), api.getDepartments()]);
+      const list = (Array.isArray(chals) ? chals : chals?.results ?? []).filter(c => c.status === 'open');
+
+      // detect newly appeared challenges since last fetch
+      const incoming = new Set(list.map(c => c.id));
+      if (silent && prevIdsRef.current.size > 0) {
+        const appeared = list.filter(c => !prevIdsRef.current.has(c.id));
+        if (appeared.length > 0) {
+          setNewCount(p => p + appeared.length);
+          setNewIds(prev => new Set([...prev, ...appeared.map(c => c.id)]));
+        }
+      }
+      prevIdsRef.current = incoming;
+
+      setChallenges(list);
+      setDepartments(Array.isArray(depts) ? depts : depts?.results ?? []);
+      setLastUpdated(new Date());
+    } catch (e) { console.error(e); }
+    finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
+
+  // Initial load
+  useEffect(() => { loadChallenges(false); }, [loadChallenges]);
+
+  // Poll every 30 seconds for new challenges
+  useEffect(() => {
+    const id = setInterval(() => loadChallenges(true), 30000);
+    return () => clearInterval(id);
+  }, [loadChallenges]);
+
+  const handleManualRefresh = () => {
+    setNewCount(0);
+    setNewIds(new Set());
+    loadChallenges(true);
+  };
+
+  const fmtTime = (d) => d ? d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
 
   const fmt = (n) => n ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n) : 'N/A';
   const f = filters;
@@ -173,17 +213,72 @@ export default function DiscoverChallenges() {
       <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px', background: '#F8FAFC' }}>
         {/* Header */}
         <div style={{ marginBottom: 28 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 10, background: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Target size={20} color="#4F46E5" />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: '#EEF2FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Target size={20} color="#4F46E5" />
+              </div>
+              <div>
+                <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 800, color: '#0B0F19', margin: 0 }}>
+                  Discover Challenges
+                </h1>
+                <p style={{ fontSize: 13, color: '#94A3B8', margin: 0 }}>
+                  {filtered.length} open challenge{filtered.length !== 1 ? 's' : ''} matching your filters
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 800, color: '#0B0F19', margin: 0 }}>
-                Discover Challenges
-              </h1>
-              <p style={{ fontSize: 13, color: '#94A3B8', margin: 0 }}>
-                {filtered.length} open challenge{filtered.length !== 1 ? 's' : ''} matching your filters
-              </p>
+
+            {/* Refresh controls */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {/* New-challenges badge */}
+              {newCount > 0 && (
+                <motion.button
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleManualRefresh}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '6px 14px', borderRadius: 100, border: 'none', cursor: 'pointer',
+                    background: 'linear-gradient(135deg, #4F46E5, #7C3AED)',
+                    color: '#fff', fontSize: 12, fontWeight: 700,
+                    boxShadow: '0 4px 12px rgba(79,70,229,0.4)',
+                  }}
+                >
+                  <motion.span
+                    animate={{ scale: [1, 1.3, 1] }}
+                    transition={{ duration: 1, repeat: Infinity }}
+                    style={{ width: 7, height: 7, borderRadius: '50%', background: '#fff', display: 'inline-block' }}
+                  />
+                  {newCount} new — click to load
+                </motion.button>
+              )}
+
+              {/* Last updated + manual refresh */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {lastUpdated && (
+                  <span style={{ fontSize: 11, color: '#94A3B8' }}>
+                    Updated {fmtTime(lastUpdated)}
+                  </span>
+                )}
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={handleManualRefresh}
+                  disabled={refreshing}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 34, height: 34, borderRadius: 9,
+                    border: '1.5px solid #E2E8F0', background: '#fff', cursor: 'pointer',
+                  }}
+                  title="Refresh challenges"
+                >
+                  <motion.span animate={refreshing ? { rotate: 360 } : { rotate: 0 }} transition={refreshing ? { duration: 0.8, repeat: Infinity, ease: 'linear' } : {}}>
+                    <RefreshCw size={14} color={refreshing ? '#4F46E5' : '#64748B'} />
+                  </motion.span>
+                </motion.button>
+              </div>
             </div>
           </div>
         </div>
@@ -227,6 +322,21 @@ export default function DiscoverChallenges() {
                     <div style={{ height: 4, background: `linear-gradient(90deg, ${sc.text}, ${sc.text}66)`, boxShadow: `0 0 8px ${sc.glow}` }} />
 
                     <div style={{ padding: '18px 20px 20px' }}>
+                      {/* NEW pill for challenges that appeared since last poll */}
+                      {newIds.has(chal.id) && (
+                        <motion.span
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          style={{
+                            display: 'inline-block', marginBottom: 8,
+                            fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 100,
+                            background: 'linear-gradient(135deg, #4F46E5, #7C3AED)',
+                            color: '#fff', letterSpacing: '0.08em',
+                          }}
+                        >
+                          NEW
+                        </motion.span>
+                      )}
                       {/* Title + dept */}
                       <div style={{ marginBottom: 14 }}>
                         <h3 style={{ fontSize: 15, fontWeight: 700, color: '#0B0F19', lineHeight: 1.4, marginBottom: 5 }}>

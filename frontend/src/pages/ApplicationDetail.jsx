@@ -11,6 +11,7 @@ import StatusBadge from '../components/StatusBadge';
 import TierBadge from '../components/TierBadge';
 import ProofOfDisclosure from '../components/ProofOfDisclosure';
 import StartupTrustProfile from '../components/StartupTrustProfile';
+import Reveal, { StaggerReveal } from '../components/Reveal';
 
 const VERDICT_COLORS = {
   likely_novel:   { bg: '#D1FAE5', text: '#059669', label: 'Likely Novel' },
@@ -122,7 +123,7 @@ export default function ApplicationDetail() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 20, alignItems: 'start' }}>
         {/* ── Main column ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <StaggerReveal stagger={0.07} direction="up">
           {/* Trust profile */}
           {['department','evaluator','admin'].includes(user.role) && application.startup && (
             <StartupTrustProfile
@@ -258,9 +259,10 @@ export default function ApplicationDetail() {
               <ShieldCheck size={18} /> Generate Contract
             </motion.button>
           )}
-        </div>
+        </StaggerReveal>
 
         {/* ── Sidebar ── */}
+        <Reveal direction="left" delay={0.15}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Details card */}
           <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #E2E8F0', padding: '18px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
@@ -294,6 +296,7 @@ export default function ApplicationDetail() {
             </div>
           )}
         </div>
+        </Reveal>
       </div>
     </div>
   );

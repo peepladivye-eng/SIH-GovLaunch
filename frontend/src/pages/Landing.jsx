@@ -4,6 +4,7 @@ import { motion, useScroll, useTransform, useSpring, useInView, AnimatePresence 
 import { ArrowRight, Target, Rocket, TrendingUp, Award, Wallet, Trophy, ShieldCheck, BarChart2, Users, Lock, ChevronDown } from 'lucide-react';
 import { api } from '../lib/api';
 import { NumberTicker } from '../components/NumberTicker';
+import Reveal from '../components/Reveal';
 
 // ── Floating particle ─────────────────────────────────────────────────────────
 function Particle({ x, y, size, duration, delay, color }) {
@@ -105,29 +106,6 @@ function TiltCard({ children, style }) {
           ([gx, gy]) => `radial-gradient(circle at ${gx}% ${gy}%, rgba(255,255,255,0.08) 0%, transparent 60%)`
         ),
       }} />
-      {children}
-    </motion.div>
-  );
-}
-
-// ── Scroll reveal wrapper ─────────────────────────────────────────────────────
-function Reveal({ children, direction = 'up', delay = 0 }) {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: '-80px' });
-  const dirs = {
-    up:    { hidden: { opacity: 0, y: 60 },    visible: { opacity: 1, y: 0 } },
-    left:  { hidden: { opacity: 0, x: -60 },   visible: { opacity: 1, x: 0 } },
-    right: { hidden: { opacity: 0, x: 60 },    visible: { opacity: 1, x: 0 } },
-    scale: { hidden: { opacity: 0, scale: 0.8 }, visible: { opacity: 1, scale: 1 } },
-  };
-  return (
-    <motion.div
-      ref={ref}
-      initial="hidden"
-      animate={inView ? 'visible' : 'hidden'}
-      variants={dirs[direction]}
-      transition={{ duration: 0.7, delay, ease: [0.25, 0.46, 0.45, 0.94] }}
-    >
       {children}
     </motion.div>
   );

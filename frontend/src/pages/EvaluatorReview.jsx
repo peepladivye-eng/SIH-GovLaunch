@@ -4,6 +4,7 @@ import { motion, useInView } from 'motion/react';
 import { ClipboardCheck, Clock, CheckCircle, AlertCircle, ArrowRight, Star } from 'lucide-react';
 import { api } from '../lib/api';
 import StatusBadge from '../components/StatusBadge';
+import Reveal, { StaggerReveal } from '../components/Reveal';
 
 function Stat({ icon: Icon, value, label, accent }) {
   const ref = useRef(null);
@@ -94,13 +95,14 @@ export default function EvaluatorReview() {
       </motion.div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 28 }}>
+      <StaggerReveal stagger={0.09} direction="up" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 28 }}>
         <Stat icon={Clock}        value={pending.length}   label="Pending Review"  accent="#D97706" />
         <Stat icon={CheckCircle}  value={shortlist.length} label="Shortlisted"     accent="#10B981" />
         <Stat icon={AlertCircle}  value={rejected.length}  label="Not Selected"   accent="#EF4444" />
-      </div>
+      </StaggerReveal>
 
       {/* Applications list */}
+      <Reveal direction="up" delay={0.2}>
       <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Star size={16} color="#D97706" />
@@ -159,6 +161,7 @@ export default function EvaluatorReview() {
           ))
         )}
       </div>
+      </Reveal>
     </div>
   );
 }

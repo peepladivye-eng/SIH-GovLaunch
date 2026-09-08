@@ -62,6 +62,8 @@ export const api = {
   getChallenge: (id) => request(`/api/challenges/${id}/`),
   createChallenge: (data) =>
     request('/api/challenges/', { method: 'POST', body: JSON.stringify(data) }),
+  updateChallenge: (id, data) =>
+    request(`/api/challenges/${id}/`, { method: 'PATCH', body: JSON.stringify(data) }),
 
   // Applications
   getApplications: (params = '') => request(`/api/applications/${params ? '?' + params : ''}`),
@@ -72,6 +74,8 @@ export const api = {
   getMyApplications: () => request('/api/applications/'),
   logApplicationView: (applicationId) =>
     request(`/api/applications/${applicationId}/log-view/`, { method: 'POST' }),
+  updateApplicationStatus: (applicationId, newStatus) =>
+    request(`/api/applications/${applicationId}/update-status/`, { method: 'PATCH', body: JSON.stringify({ status: newStatus }) }),
 
   // Auth - signup
   signup: (data) =>

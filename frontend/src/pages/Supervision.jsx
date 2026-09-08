@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Clock, ShieldCheck, Save, Cpu, AlertTriangle, CheckCircle, Key, Zap } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../components/ui/toast';
+import Reveal, { StaggerReveal } from '../components/Reveal';
 
 const FIELD = {
   width: '100%', padding: '10px 14px', borderRadius: 10, height: 44,
@@ -87,6 +88,7 @@ export default function Supervision() {
       </motion.div>
 
       {/* ── Flagged Duplicates ── */}
+      <Reveal direction="up" delay={0.1}>
       <section style={{ marginBottom: 28 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
           <AlertTriangle size={18} color="#D97706" />
@@ -147,8 +149,10 @@ export default function Supervision() {
           )}
         </div>
       </section>
+      </Reveal>
 
       {/* ── AI Provider ── */}
+      <Reveal direction="up" delay={0.18}>
       <section>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
           <Cpu size={18} color="#4F46E5" />
@@ -229,6 +233,7 @@ export default function Supervision() {
           </div>
         </div>
       </section>
+      </Reveal>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import StatusBadge from '../components/StatusBadge';
 import TierBadge from '../components/TierBadge';
 import { RatingTierBadge } from '../components/BadgeIcon';
 import { useToast } from '../components/ui/toast';
+import Reveal, { StaggerReveal } from '../components/Reveal';
 
 const COLUMNS = [
   { key: 'submitted',        label: 'Submitted',       color: '#94A3B8' },
@@ -44,7 +45,7 @@ export default function ChallengeDetail() {
         const chal = await api.getChallenge(id);
         setChallenge(chal);
         let apps = [];
-        try { apps = await api.getApplications(`?challenge=${id}`); }
+        try { apps = await api.getApplications(`challenge=${id}`); }
         catch { const all = await api.getApplications(); apps = all.filter(a => String(a.challenge) === String(id)); }
         setRejectedApps(apps.filter(a => a.status === 'rejected' || a.status === 'ineligible'));
         setApplications(apps.filter(a => a.status !== 'rejected' && a.status !== 'ineligible'));
@@ -122,6 +123,7 @@ export default function ChallengeDetail() {
       </motion.div>
 
       {/* ── Info + sidebar grid ── */}
+      <Reveal direction="up" delay={0.1}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 20, marginBottom: 28 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {[
@@ -186,6 +188,7 @@ export default function ChallengeDetail() {
           </div>
         </div>
       </div>
+      </Reveal>
 
       {/* ── Finalize result ── */}
       {finalizeResult && (
@@ -250,6 +253,7 @@ export default function ChallengeDetail() {
       )}
 
       {/* ── Kanban board ── */}
+      <Reveal direction="up" delay={0.1}>
       <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 16 }}>
         {COLUMNS.map(col => {
           const colApps = applications.filter(a => a.status === col.key);
@@ -298,9 +302,9 @@ export default function ChallengeDetail() {
                         <div style={{ marginBottom: 6 }}><RatingTierBadge rating={app.startup_rating} size={26} /></div>
                       )}
                       {/* Sector tags */}
-                      {app.sector_tags && (
+                      {app.startup_sector_tags && (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
-                          {(Array.isArray(app.sector_tags) ? app.sector_tags : String(app.sector_tags).split(',')).slice(0, 2).map((t, i) => (
+                          {(Array.isArray(app.startup_sector_tags) ? app.startup_sector_tags : String(app.startup_sector_tags).split(',')).slice(0, 2).map((t, i) => (
                             <span key={i} style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 100, background: `${getSC(t)}14`, color: getSC(t) }}>
                               {t.trim()}
                             </span>
@@ -334,6 +338,7 @@ export default function ChallengeDetail() {
           );
         })}
       </div>
+      </Reveal>
     </div>
   );
 }

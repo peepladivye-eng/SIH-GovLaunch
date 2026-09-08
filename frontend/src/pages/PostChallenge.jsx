@@ -5,6 +5,7 @@ import { ArrowLeft, Plus, X, FileText, Target, IndianRupee, Clock, ShieldCheck, 
 import { api } from '../lib/api';
 import { useToast } from '../components/ui/toast';
 import { ShimmerButton } from '../components/ShimmerButton';
+import Reveal, { StaggerReveal } from '../components/Reveal';
 
 const SECTORS = [
   { id: 'healthtech',   label: 'Healthtech',   bg: '#EEF2FF', text: '#4F46E5' },
@@ -90,7 +91,18 @@ export default function PostChallenge() {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.createChallenge(formData);
+      // Map form booleans into the eligibility_rules JSON structure the backend expects
+      const { require_dpiit_recognition, require_minimum_turnover, require_no_prior_blacklist, ...rest } = formData;
+      const payload = {
+        ...rest,
+        status: 'open',          // publish immediately — dept can close later
+        eligibility_rules: {
+          requires_dpiit:        require_dpiit_recognition,
+          min_turnover_required: require_minimum_turnover,
+          requires_no_blacklist: require_no_prior_blacklist,
+        },
+      };
+      await api.createChallenge(payload);
       toast({ title: 'Challenge published!', description: 'Your challenge is now live.' });
       navigate('/challenges');
     } catch (err) {
@@ -138,6 +150,7 @@ export default function PostChallenge() {
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         {/* Basic info */}
+        <Reveal direction="up" delay={0.05}>
         <Section icon={FileText} title="Basic Information" accent="#4F46E5">
           <Field label="Challenge Title" value={formData.title} onChange={set('title')}
             placeholder="e.g., AI-Assisted Triage for Rural PHCs" required
@@ -161,8 +174,10 @@ export default function PostChallenge() {
             </div>
           </div>
         </Section>
+        </Reveal>
 
         {/* Details */}
+        <Reveal direction="up" delay={0.1}>
         <Section icon={Zap} title="Challenge Details" accent="#7C3AED">
           <TextareaField label="Background & Problem Statement" value={formData.background} onChange={set('background')}
             placeholder="Describe the problem, its context, and why it matters…" rows={4} required />
@@ -172,8 +187,10 @@ export default function PostChallenge() {
             placeholder="Technical, regulatory, or operational constraints…" rows={3}
             hint="Optional but recommended" />
         </Section>
+        </Reveal>
 
         {/* Budget + timeline */}
+        <Reveal direction="up" delay={0.15}>
         <Section icon={IndianRupee} title="Budget & Timeline" accent="#D97706">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <Field label="Budget Ceiling (INR)" type="number" value={formData.budget_ceiling}
@@ -182,8 +199,10 @@ export default function PostChallenge() {
               onChange={set('timeline_weeks')} placeholder="e.g., 12" required />
           </div>
         </Section>
+        </Reveal>
 
         {/* Eligibility */}
+        <Reveal direction="up" delay={0.2}>
         <Section icon={ShieldCheck} title="Eligibility Requirements" accent="#059669">
           {[
             { key: 'require_dpiit_recognition', label: 'Require DPIIT Recognition', desc: 'Applicants must hold valid DPIIT recognition' },
@@ -210,8 +229,10 @@ export default function PostChallenge() {
             </label>
           ))}
         </Section>
+        </Reveal>
 
         {/* Actions */}
+        <Reveal direction="up" delay={0.25}>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
           <motion.button type="button" onClick={() => navigate('/challenges')}
             whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
@@ -223,6 +244,7 @@ export default function PostChallenge() {
             {loading ? 'Publishing…' : 'Publish Challenge'}
           </ShimmerButton>
         </div>
+        </Reveal>
       </form>
     </div>
   );

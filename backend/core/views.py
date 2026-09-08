@@ -2,7 +2,7 @@ import os
 from django.contrib.auth import authenticate, login, logout
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.authentication import SessionAuthentication
 from .models import *
@@ -251,7 +251,54 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         )
         # R3 — first_application badge (always idempotent via get_or_create)
         from .badges import award_badge
-        award_badge(app.startup, 'first_application')
+        if hasattr(app, 'startup') and app.startup_id:
+            award_badge(app.startup, 'first_application')
+
+    @action(detail=True, methods=['patch'], url_path='update-status')
+    def update_status(self, request, pk=None):
+        """
+        PATCH /api/applications/<id>/update-status/
+        Department (scoped to own challenge) can move an application through
+        the pipeline: screening → eligible → under_evaluation → shortlisted → rejected
+        """
+        ALLOWED_TRANSITIONS = {
+            'submitted':        ['screening', 'ineligible', 'rejected'],
+            'screening':        ['eligible', 'ineligible', 'rejected'],
+            'eligible':         ['under_evaluation', 'rejected'],
+            'under_evaluation': ['shortlisted', 'rejected'],
+            'shortlisted':      ['contracted', 'rejected'],
+        }
+        user = request.user
+        if user.role != 'department' or not hasattr(user, 'department'):
+            return Response({'error': 'Department access only.'}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            app = Application.objects.select_related('challenge__department').get(pk=pk)
+        except Application.DoesNotExist:
+            return Response({'error': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if app.challenge.department != user.department:
+            return Response({'error': 'Not your challenge.'}, status=status.HTTP_403_FORBIDDEN)
+
+        new_status = request.data.get('status')
+        if not new_status:
+            return Response({'error': 'status field is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        allowed = ALLOWED_TRANSITIONS.get(app.status, [])
+        if new_status not in allowed:
+            return Response(
+                {'error': f"Cannot move from '{app.status}' to '{new_status}'. Allowed: {allowed}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        app.status = new_status
+        app.save(update_fields=['status'])
+        AuditLog.objects.create(
+            actor=user.username,
+            action=f'Updated application status to {new_status}',
+            target=f'Application #{app.id}',
+        )
+        return Response(ApplicationSerializer(app).data)
 
 
 class EligibilityResultViewSet(viewsets.ReadOnlyModelViewSet):
@@ -363,6 +410,35 @@ class ScaleUpEntryViewSet(viewsets.ModelViewSet):
     queryset = ScaleUpEntry.objects.all()
     serializer_class = ScaleUpEntrySerializer
     authentication_classes = (CsrfExemptSessionAuthentication,)
+
+    def partial_update(self, request, *args, **kwargs):
+        """
+        PATCH /api/scaleup-entries/<id>/
+        If payload contains {"adopted": true}, increment adopted_count and
+        append the requesting department to adopting_departments.
+        """
+        instance = self.get_object()
+        if request.data.get('adopted') is True:
+            user = request.user
+            dept_name = ''
+            if user.role == 'department' and hasattr(user, 'department'):
+                dept_name = user.department.name
+            # Avoid duplicate adoption entries
+            existing_names = [
+                d.get('name', d) if isinstance(d, dict) else d
+                for d in instance.adopting_departments
+            ]
+            if dept_name and dept_name not in existing_names:
+                instance.adopting_departments = list(instance.adopting_departments) + [{'name': dept_name}]
+                instance.adopted_count = len(instance.adopting_departments)
+                instance.save(update_fields=['adopting_departments', 'adopted_count'])
+                AuditLog.objects.create(
+                    actor=user.username,
+                    action='Adopted scale-up pilot',
+                    target=instance.original_challenge_title,
+                )
+            return Response(ScaleUpEntrySerializer(instance).data)
+        return super().partial_update(request, *args, **kwargs)
 
 
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
@@ -482,13 +558,12 @@ def ai_provider_config(request):
     return Response(AIProviderConfigSerializer(cfg).data)
 
 
-@api_view(['POST'])
+@api_view(['GET', 'POST'])
 @permission_classes([permissions.IsAuthenticated])
 def novelty_check(request, pk):
     """
-    POST /api/applications/<id>/novelty-check/
-    Calls the department's configured AI provider with the solution brief
-    and persists a NoveltyCheck result.
+    GET  /api/applications/<id>/novelty-check/  — return existing check or null
+    POST /api/applications/<id>/novelty-check/  — run AI check and persist result
     """
     import json, requests as http
 
@@ -499,6 +574,15 @@ def novelty_check(request, pk):
     except Application.DoesNotExist:
         return Response({'error': 'Application not found.'}, status=status.HTTP_404_NOT_FOUND)
 
+    # ── GET: return the saved result (or null) ────────────────────────────────
+    if request.method == 'GET':
+        try:
+            nc = NoveltyCheck.objects.get(application=app)
+            return Response(NoveltyCheckSerializer(nc).data)
+        except NoveltyCheck.DoesNotExist:
+            return Response(None)
+
+    # ── POST: call AI provider and persist result ─────────────────────────────
     dept = app.challenge.department
     try:
         cfg = AIProviderConfig.objects.get(department=dept, enabled=True)
