@@ -143,7 +143,7 @@ def translate_all():
         if lang_code == 'en':
             continue
         
-        print(f"\n🌐 Translating to {lang_name} ({lang_code})...")
+        print(f"\nTranslating to {lang_name} ({lang_code})...")
         translated = {}
         
         for key, text in EN_STRINGS.items():
@@ -155,9 +155,9 @@ def translate_all():
                 
                 result = GoogleTranslator(source='en', target=lang_code).translate(text)
                 translated[key] = result
-                print(f"  ✓ {key}: {text[:40]}... → {result[:40]}...")
+                print(f"  OK {key}")
             except Exception as e:
-                print(f"  ✗ {key}: {e}")
+                print(f"  FAIL {key}: {e}")
                 translated[key] = text  # Fallback to English
         
         all_translations[lang_code] = translated
