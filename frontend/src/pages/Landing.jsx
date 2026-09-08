@@ -4,6 +4,8 @@ import { motion, useScroll, useTransform, useSpring, useInView, AnimatePresence 
 import { ArrowRight, Target, Rocket, TrendingUp, Award, Wallet, Trophy, ShieldCheck, BarChart2, Users, Lock, ChevronDown } from 'lucide-react';
 import { api } from '../lib/api';
 import { NumberTicker } from '../components/NumberTicker';
+import LanguageSwitcher from '../components/LanguageSwitcher';
+import { useTranslation } from '../lib/translations';
 
 // ── Floating particle ─────────────────────────────────────────────────────────
 function Particle({ x, y, size, duration, delay, color }) {
