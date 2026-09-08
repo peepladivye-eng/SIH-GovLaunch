@@ -398,7 +398,7 @@ export default function Landing() {
             transition={{ duration: 0.7, delay: 0.7 }}
             style={{ fontSize: 19, color: '#64748B', lineHeight: 1.7, maxWidth: 540, margin: '0 auto 44px' }}
           >
-            Government departments post real problems. Startups compete on merit — not paperwork. Every bid timestamped, every contract auto-drafted.
+            {t('landing.hero.subtitle')}
           </motion.p>
 
           {/* CTAs */}
