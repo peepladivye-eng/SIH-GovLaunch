@@ -41,8 +41,9 @@ export const translations = {
     // Landing page
     'landing.hero.title': 'Government Innovation Procurement',
     'landing.hero.subtitle': 'Connecting Indian startups with government departments for outcome-based pilot contracts',
-    'landing.cta.login': 'Login',
+    'landing.cta.login': 'Log In',
     'landing.cta.signup': 'Join as Startup',
+    'landing.cta.govt': 'Government Login',
     'landing.stats.challenges': 'Open Challenges',
     'landing.stats.startups': 'Registered Startups',
     'landing.stats.pilots': 'Pilots Scaled',
