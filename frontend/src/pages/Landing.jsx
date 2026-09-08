@@ -252,7 +252,8 @@ export default function Landing() {
           ))}
         </div>
 
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <LanguageSwitcher variant="landing" />
           <MagneticButton onClick={() => navigate('/login')}
             style={{ background: 'none', border: 'none', color: '#94A3B8', fontSize: 14, fontWeight: 500, padding: '8px 16px', borderRadius: 8 }}>
             Log In
