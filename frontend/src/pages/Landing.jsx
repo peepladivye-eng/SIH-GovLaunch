@@ -238,17 +238,21 @@ export default function Landing() {
         </div>
 
         <div style={{ display: 'flex', gap: 32 }}>
-          {['Home', 'Problem Statements', 'How It Works'].map((l, i) => (
+          {[
+            { label: t('nav.home'), href: '#' },
+            { label: t('nav.problemStatements'), href: '/discover' },
+            { label: t('nav.howItWorks'), href: '#' }
+          ].map((l, i) => (
             <motion.a
-              key={l}
-              href={l === 'Problem Statements' ? '/discover' : '#'}
+              key={i}
+              href={l.href}
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 + i * 0.08 }}
               whileHover={{ color: '#fff', y: -1 }}
               style={{ color: '#64748B', fontSize: 14, fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}
             >
-              {l}
+              {l.label}
             </motion.a>
           ))}
         </div>
