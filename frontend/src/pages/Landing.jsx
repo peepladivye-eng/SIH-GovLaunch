@@ -363,7 +363,7 @@ export default function Landing() {
 
           {/* Main headline — word by word reveal */}
           <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 'clamp(42px,6vw,76px)', fontWeight: 800, lineHeight: 1.08, marginBottom: 28 }}>
-            {'Where Startups'.split(' ').map((word, i) => (
+            {t('landing.hero.title1').split(' ').map((word, i) => (
               <motion.span
                 key={i}
                 initial={{ opacity: 0, y: 40, rotateX: -40 }}
@@ -375,7 +375,7 @@ export default function Landing() {
               </motion.span>
             ))}
             <br />
-            {'Meet the State.'.split(' ').map((word, i) => (
+            {t('landing.hero.title2').split(' ').map((word, i) => (
               <motion.span
                 key={i}
                 initial={{ opacity: 0, y: 40, rotateX: -40 }}
