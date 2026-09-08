@@ -357,7 +357,7 @@ export default function Landing() {
               style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF9933', boxShadow: '0 0 8px #FF9933' }}
             />
             <span style={{ fontSize: 12, color: '#94A3B8', fontWeight: 600, letterSpacing: '0.1em' }}>
-              DIGITAL INDIA · STARTUP INDIA · 2026
+              {t('landing.tagline')}
             </span>
           </motion.div>
 
