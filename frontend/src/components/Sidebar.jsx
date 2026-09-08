@@ -162,7 +162,10 @@ export default function Sidebar() {
       </nav>
 
       {/* User Info & Controls */}
-      <div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+      <div className="p-4 border-t border-[var(--color-border)] bg-[var(--color-bg-secondary)] space-y-3">
+        {/* Language Switcher */}
+        <LanguageSwitcher variant="sidebar" />
+        
         <div className="flex items-center gap-3 px-3 py-2">
           <div className="w-10 h-10 tricolor-accent rounded-lg flex items-center justify-center">
             <span className="text-[var(--color-bg)] font-mono font-bold text-sm">
