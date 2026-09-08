@@ -133,8 +133,10 @@ export const translations = {
   },
 };
 
+import { useLanguage } from '../contexts/LanguageContext';
+
 export function useTranslation() {
-  const { language } = require('../contexts/LanguageContext').useLanguage();
+  const { language } = useLanguage();
   
   const t = (key) => {
     return translations[language]?.[key] || translations.en[key] || key;
