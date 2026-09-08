@@ -167,8 +167,8 @@ def translate_all():
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(all_translations, f, ensure_ascii=False, indent=2)
     
-    print(f"\n✅ Translations saved to {output_file}")
-    print(f"📊 Total: {len(LANGUAGES)} languages × {len(EN_STRINGS)} strings = {len(LANGUAGES) * len(EN_STRINGS)} translations")
+    print(f"\nTranslations saved to {output_file}")
+    print(f"Total: {len(LANGUAGES)} languages x {len(EN_STRINGS)} strings = {len(LANGUAGES) * len(EN_STRINGS)} translations")
 
 if __name__ == '__main__':
     translate_all()
