@@ -265,7 +265,7 @@ export default function Landing() {
               color: '#2DD4BF', fontSize: 14, fontWeight: 600, padding: '8px 20px', borderRadius: 8,
               backdropFilter: 'blur(8px)',
             }}>
-            Government Login
+            {t('landing.cta.signup')}
           </MagneticButton>
         </div>
       </motion.nav>
